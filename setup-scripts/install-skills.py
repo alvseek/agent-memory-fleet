@@ -157,20 +157,21 @@ def build_skill(name: str, text: str) -> str:
     )
 
 
-def cleanup(target_dir: Path, manifest: Path, sibling_manifest: Path) -> int:
-    """Remove previously installed overlay skills, per the overlay manifest.
+def cleanup(target_dir: Path, manifest: Path, sibling_manifests: list[Path]) -> int:
+    """Remove previously installed fleet skills, per the fleet manifest.
 
-    Never removes a folder the sibling (memory core) manifest also claims. Both installers write
-    into one skills directory, so a stale entry — a procedure that moved core<->overlay in an
-    earlier session — must not delete a skill the other installer owns. This is what makes the
-    two installers order-independent.
+    Never removes a folder that any sibling manifest also claims. All three installers (core,
+    coding, fleet) write into one skills directory, so a stale entry, a procedure that moved
+    between repos in an earlier session, must not delete a skill another installer owns. This is
+    what makes the installers order-independent; the more siblings, the more it matters.
     """
     if not manifest.exists():
         return 0
     sibling: set[str] = set()
-    if sibling_manifest.exists():
-        raw = sibling_manifest.read_text(encoding="utf-8").splitlines()
-        sibling = {ln.strip() for ln in raw if ln.strip()}
+    for sibling_manifest in sibling_manifests:
+        if sibling_manifest.exists():
+            raw = sibling_manifest.read_text(encoding="utf-8").splitlines()
+            sibling |= {ln.strip() for ln in raw if ln.strip()}
     removed = 0
     for line in manifest.read_text(encoding="utf-8").splitlines():
         folder = line.strip()
@@ -186,7 +187,7 @@ def cleanup(target_dir: Path, manifest: Path, sibling_manifest: Path) -> int:
 def install(
     target_dir: Path | str,
     manifest_name: str,
-    sibling_manifest_name: str,
+    sibling_manifest_names: list[str],
     root: Path | str = _ROOT,
     output_dir: Path | str | None = None,
 ) -> tuple[list[str], int]:
@@ -202,7 +203,9 @@ def install(
     reports = _cc.compile_all(root, output_dir, verbose=False)
 
     removed = cleanup(
-        target_dir, target_dir / manifest_name, target_dir / sibling_manifest_name
+        target_dir,
+        target_dir / manifest_name,
+        [target_dir / name for name in sibling_manifest_names],
     )
 
     installed: list[str] = []
@@ -337,7 +340,7 @@ def run(
     platform: str,
     target_dir: Path,
     manifest_name: str,
-    sibling_manifest_name: str,
+    sibling_manifest_names: list[str],
     instructions_file: Path,
 ) -> int:
     """Shared ``main()`` body for a platform entry point."""
@@ -349,7 +352,7 @@ def run(
         print(f"Error: overlay procedures directory not found: {_ROOT / 'procedures'}")
         return 1
 
-    installed, removed = install(target_dir, manifest_name, sibling_manifest_name)
+    installed, removed = install(target_dir, manifest_name, sibling_manifest_names)
 
     if removed:
         print(f"Cleaned up {removed} stale overlay skills\n")

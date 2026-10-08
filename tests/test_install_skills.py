@@ -26,7 +26,7 @@ sys.modules["overlay_install_skills"] = sk
 _spec.loader.exec_module(sk)
 
 _MANIFEST = ".agent-memory-fleet-codex-manifest"
-_SIBLING_MANIFEST = ".agent-memory-codex-manifest"
+_SIBLING_MANIFESTS = [".agent-memory-codex-manifest", ".agent-memory-coding-skill-codex-manifest"]
 
 # Antigravity documents 1024; staying inside the smaller published cap keeps one emitter
 # correct for both platforms.
@@ -44,7 +44,7 @@ def _install(tmp_path: Path):
     target = tmp_path / "skills"
     out = tmp_path / "out"
     installed, removed = sk.install(
-        target, _MANIFEST, _SIBLING_MANIFEST, root=ROOT, output_dir=out
+        target, _MANIFEST, _SIBLING_MANIFESTS, root=ROOT, output_dir=out
     )
     return target, out, installed, removed
 
@@ -152,10 +152,10 @@ def test_reinstall_cleans_stale_but_never_a_sibling_skill(tmp_path: Path) -> Non
     manifest.write_text(
         manifest.read_text(encoding="utf-8") + f"{shared.name}\n", encoding="utf-8"
     )
-    (target / _SIBLING_MANIFEST).write_text(f"{shared.name}\n", encoding="utf-8")
+    (target / _SIBLING_MANIFESTS[0]).write_text(f"{shared.name}\n", encoding="utf-8")
 
     second, removed = sk.install(
-        target, _MANIFEST, _SIBLING_MANIFEST, root=ROOT, output_dir=out
+        target, _MANIFEST, _SIBLING_MANIFESTS, root=ROOT, output_dir=out
     )
 
     assert not stale.exists(), "stale overlay skill was not cleaned up"
@@ -165,6 +165,23 @@ def test_reinstall_cleans_stale_but_never_a_sibling_skill(tmp_path: Path) -> Non
     # previously-installed skill plus the stale one, with the sibling-claimed one skipped
     assert removed == len(first) + 1
     assert sorted(second) == sorted(first)
+
+
+def test_any_sibling_manifest_protects_its_skills(tmp_path: Path) -> None:
+    """A name claimed by ANY sibling (here the coding overlay) survives a fleet reinstall."""
+    target, out, _first, _ = _install(tmp_path)
+
+    coding_owned = target / f"{sk.FOLDER_PREFIX}coding-owned"
+    coding_owned.mkdir()
+    (coding_owned / "SKILL.md").write_text("coding\n", encoding="utf-8")
+    manifest = target / _MANIFEST
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8") + f"{coding_owned.name}\n", encoding="utf-8"
+    )
+    (target / _SIBLING_MANIFESTS[1]).write_text(f"{coding_owned.name}\n", encoding="utf-8")
+
+    sk.install(target, _MANIFEST, _SIBLING_MANIFESTS, root=ROOT, output_dir=out)
+    assert coding_owned.is_dir(), "cleanup deleted a skill a second sibling claims"
 
 
 def test_fleet_layer_access_registration_is_idempotent(tmp_path: Path) -> None:

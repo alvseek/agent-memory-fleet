@@ -45,6 +45,7 @@ _spec.loader.exec_module(_skills)
 
 MANIFEST_NAME = ".agent-memory-fleet-opencode-manifest"
 CORE_MANIFEST_NAME = ".agent-memory-opencode-manifest"
+CODING_MANIFEST_NAME = ".agent-memory-coding-skill-opencode-manifest"
 
 
 def _config_base() -> Path:
@@ -97,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         platform="OpenCode",
         target_dir=target,
         manifest_name=MANIFEST_NAME,
-        sibling_manifest_name=CORE_MANIFEST_NAME,
+        sibling_manifest_names=[CORE_MANIFEST_NAME, CODING_MANIFEST_NAME],
         instructions_file=base / "AGENTS.md",
     )
     if legacy_removed:

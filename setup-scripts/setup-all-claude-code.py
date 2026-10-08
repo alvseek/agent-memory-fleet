@@ -28,7 +28,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 
 _MANIFEST_NAME = ".agent-memory-fleet-manifest"
-_SIBLING_MANIFEST_NAME = ".agent-memory-manifest"
+_SIBLING_MANIFEST_NAMES = [".agent-memory-manifest", ".agent-memory-coding-skill-manifest"]
 
 # Marks the overlay-path definition line in the global CLAUDE.md so re-runs never duplicate it.
 _PATH_DEF_UUID = "34ca859f-6586-4990-b729-23f834c8aaae"
@@ -51,19 +51,20 @@ def _load(name: str, path: Path):
 _cc = _load("overlay_compile", _ROOT / "setup-scripts" / "compile-procedures.py")
 
 
-def _cleanup(target_dir: Path, manifest: Path, sibling_manifest: Path) -> int:
-    """Remove previously installed overlay commands, per the overlay manifest.
+def _cleanup(target_dir: Path, manifest: Path, sibling_manifests: list[Path]) -> int:
+    """Remove previously installed fleet commands, per the fleet manifest.
 
-    Never deletes a file the sibling (core) manifest also claims: a stale entry — e.g. a command
-    that moved core<->overlay in a prior session — must not delete a command the other installer
-    owns. This is what makes the two installers order-independent.
+    Never deletes a file that any sibling manifest also claims: a stale entry, e.g. a command that
+    moved between repos in a prior session, must not delete a command another installer owns. This
+    is what makes the installers order-independent.
     """
     if not manifest.exists():
         return 0
     sibling: set[str] = set()
-    if sibling_manifest.exists():
-        raw = sibling_manifest.read_text(encoding="utf-8").splitlines()
-        sibling = {ln.strip() for ln in raw if ln.strip()}
+    for sibling_manifest in sibling_manifests:
+        if sibling_manifest.exists():
+            raw = sibling_manifest.read_text(encoding="utf-8").splitlines()
+            sibling |= {ln.strip() for ln in raw if ln.strip()}
     removed = 0
     for line in manifest.read_text(encoding="utf-8").splitlines():
         fname = line.strip()
@@ -156,7 +157,11 @@ def install(
     # file from an earlier compile can slip into the installed set.
     reports = _cc.compile_all(root, output_dir, verbose=False)
 
-    removed = _cleanup(target_dir, target_dir / _MANIFEST_NAME, target_dir / _SIBLING_MANIFEST_NAME)
+    removed = _cleanup(
+        target_dir,
+        target_dir / _MANIFEST_NAME,
+        [target_dir / name for name in _SIBLING_MANIFEST_NAMES],
+    )
 
     installed: list[str] = []
     manifest_lines: list[str] = []

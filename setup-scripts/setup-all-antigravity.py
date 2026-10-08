@@ -36,6 +36,7 @@ _spec.loader.exec_module(_skills)
 
 MANIFEST_NAME = ".agent-memory-fleet-antigravity-manifest"
 CORE_MANIFEST_NAME = ".agent-memory-antigravity-manifest"
+CODING_MANIFEST_NAME = ".agent-memory-coding-skill-antigravity-manifest"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         platform="Antigravity",
         target_dir=target,
         manifest_name=MANIFEST_NAME,
-        sibling_manifest_name=CORE_MANIFEST_NAME,
+        sibling_manifest_names=[CORE_MANIFEST_NAME, CODING_MANIFEST_NAME],
         instructions_file=Path.home() / ".gemini" / "GEMINI.md",
     )
 
