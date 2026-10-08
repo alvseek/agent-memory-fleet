@@ -165,3 +165,19 @@ def test_reinstall_cleans_stale_but_never_a_sibling_skill(tmp_path: Path) -> Non
     # previously-installed skill plus the stale one, with the sibling-claimed one skipped
     assert removed == len(first) + 1
     assert sorted(second) == sorted(first)
+
+
+def test_fleet_layer_access_registration_is_idempotent(tmp_path: Path) -> None:
+    """The fleet-layer declaration is written once, uuid-guarded, even across re-runs."""
+    instructions = tmp_path / "AGENTS.md"
+    instructions.write_text("# Global instructions\n", encoding="utf-8", newline="\n")
+
+    first = sk.register_layer_access(instructions, "FLEET", sk._FLEET_ACCESS_UUID)
+    body = instructions.read_text(encoding="utf-8")
+    assert "Registered" in first
+    assert "**[FLEET-ACCESS]**" in body
+    assert body.count(sk._FLEET_ACCESS_UUID) == 1
+
+    second = sk.register_layer_access(instructions, "FLEET", sk._FLEET_ACCESS_UUID)
+    assert "already registered" in second
+    assert instructions.read_text(encoding="utf-8").count(sk._FLEET_ACCESS_UUID) == 1

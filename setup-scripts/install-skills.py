@@ -59,6 +59,10 @@ _PATH_DEF_UUID = "34ca859f-6586-4990-b729-23f834c8aaae"
 # this UUID is provenance, matching the path-definition convention above.
 _ENV_DEF_UUID = "669d7723-4f8e-4229-a9b2-a3f5f8edc8bf"
 
+# Marks the fleet-layer access declaration ([FLEET-ACCESS] / [FLEET-MCP-URL]) this installer
+# writes: how the fleet is reached. UUID-guarded like the others, so re-runs never duplicate it.
+_FLEET_ACCESS_UUID = "40ab1e33-4da7-4687-bd20-796c1a9caf7a"
+
 # sys.platform -> the name the compiled core memory prints on its Operating System line.
 _OS_NAMES = {"win32": "Windows", "linux": "Linux", "darwin": "macOS"}
 
@@ -295,6 +299,40 @@ def register_env(instructions_file: Path) -> str:
     return f"  Registered [CORE-ACCESS] = {mode} ([CORE-MCP-URL] = {url}) + OS/bash notes"
 
 
+def register_layer_access(instructions_file: Path, layer: str, uuid: str) -> str:
+    """Define ``[<LAYER>-ACCESS]`` / ``[<LAYER>-MCP-URL]`` in a platform's global instructions file.
+
+    The declaration names how one repo's *layer* is reached: ``markdown`` for installed
+    commands/skills, ``mcp`` for procedures served over a connected server. A caller reads the
+    target layer's declaration, so each layer's own installer writes it. UUID-guarded so re-runs
+    cannot duplicate the line.
+    """
+    if not instructions_file.is_file():
+        return (
+            f"  NOTE: {instructions_file} not found - could not register\n"
+            f"        [{layer}-ACCESS]. Run the memory-core setup for this platform first,\n"
+            "        then re-run this installer."
+        )
+    marker = f"**[{layer}-ACCESS]**"
+    if marker in instructions_file.read_text(encoding="utf-8"):
+        return f"  [{layer}-ACCESS] already registered - skipped."
+
+    mode = os.environ.get(f"{layer}_ACCESS", "markdown")
+    url = os.environ.get(f"{layer}_MCP_URL", "<unset>")
+    label = layer.lower()
+    block = (
+        "\n"
+        f"- **[{layer}-ACCESS]** = `{mode}` (which form the {label} layer this machine uses: "
+        "`markdown` for the installed commands/skills, `mcp` for the procedures served over a "
+        "connected server)\n"
+        f"- **[{layer}-MCP-URL]** = `{url}` (the endpoint the served {label} layer is reached at)"
+        f"  <!-- overlay-{label}-access-def {uuid} -->\n"
+    )
+    with instructions_file.open("a", encoding="utf-8", newline="\n") as fh:
+        fh.write(block)
+    return f"  Registered [{layer}-ACCESS] = {mode} ([{layer}-MCP-URL] = {url})"
+
+
 def run(
     platform: str,
     target_dir: Path,
@@ -319,9 +357,10 @@ def run(
         print("Error: no procedures compiled — nothing installed.")
         return 1
 
-    print(f"Successfully installed {len(installed)} overlay skills!\n")
+    print(f"Successfully installed {len(installed)} fleet procedures!\n")
     print(register_path(instructions_file))
     print(register_env(instructions_file))
+    print(register_layer_access(instructions_file, "FLEET", _FLEET_ACCESS_UUID))
     print("\nInstalled overlay skills:")
     for name in installed:
         print(f"  {FOLDER_PREFIX}{name}")
