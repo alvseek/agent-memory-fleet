@@ -1,6 +1,6 @@
-"""Install the agent-memory-fleet OVERLAY procedures as ``~/.claude/commands/``.
+"""Install the agent-memory-fleet procedures as ``~/.claude/commands/``.
 
-Compiles the coding/repo overlay procedures (wizards, doc-gen, QA, fleet, map-orientation,
+Compiles the coding/repo fleet procedures (wizards, doc-gen, QA, fleet, map-orientation,
 localize-context, wait-options, push/pull, project-wrap-up, awaken-coder) via
 ``compile-procedures.py``, then installs the **compiled** self-contained commands — so an
 installed command carries no reference to ``components/`` or ``templates/``.
@@ -181,19 +181,19 @@ def main(argv: list[str] | None = None) -> int:
         os.environ.get("AGENT_MEMORY_TARGET_DIR") or Path.home() / ".claude" / "commands"
     )
 
-    print("=== Setup agent-memory-fleet OVERLAY Slash Commands ===\n")
-    print(f"Source (overlay): {_ROOT / 'output'}")
+    print("=== Setup agent-memory-fleet Slash Commands ===\n")
+    print(f"Source (fleet): {_ROOT / 'output'}")
     print(f"Target:           {target}\n")
 
     if not (_ROOT / "procedures").is_dir():
-        print(f"Error: overlay procedures directory not found: {_ROOT / 'procedures'}")
+        print(f"Error: fleet procedures directory not found: {_ROOT / 'procedures'}")
         return 1
 
     installed, removed = install(target)
 
     if removed:
-        print("Cleaning up previously installed overlay commands...")
-        print(f"  Removed {removed} stale overlay commands\n")
+        print("Cleaning up previously installed fleet commands...")
+        print(f"  Removed {removed} stale fleet commands\n")
     if not installed:
         print("Error: no procedures compiled — nothing installed.")
         return 1
@@ -205,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
             Path.home() / ".claude" / "CLAUDE.md", "FLEET", _FLEET_ACCESS_UUID
         )
     )
-    print("\nInstalled overlay commands:")
+    print("\nInstalled fleet commands:")
     for name in installed:
         print(f"  /{name}")
     return 0

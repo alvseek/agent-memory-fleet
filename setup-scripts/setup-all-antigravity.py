@@ -1,4 +1,4 @@
-"""Install the agent-memory-fleet OVERLAY procedures as Antigravity **Agent Skills**.
+"""Install the agent-memory-fleet procedures as Antigravity **Agent Skills**.
 
 Replaces the old ``setup-all-antigravity.sh``, which wrote flat markdown into
 ``~/.gemini/workflows`` — wrong on three counts: that is not where Antigravity looks, workflows

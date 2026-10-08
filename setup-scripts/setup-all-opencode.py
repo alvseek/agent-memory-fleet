@@ -1,4 +1,4 @@
-"""Install the agent-memory-fleet OVERLAY procedures as OpenCode **Agent Skills**.
+"""Install the agent-memory-fleet procedures as OpenCode **Agent Skills**.
 
 OpenCode discovers global skills as folders holding a ``SKILL.md`` with ``name`` and
 ``description`` frontmatter in ``~/.config/opencode/skills/`` (``$XDG_CONFIG_HOME/opencode/skills/``
@@ -57,7 +57,7 @@ def _config_base() -> Path:
 
 
 def _migrate_from_commands(commands_dir: Path) -> int:
-    """Remove overlay commands left by the previous commands-based installer.
+    """Remove fleet commands left by the previous commands-based installer.
 
     The first generation of this installer wrote flat ``<name>.md`` files into the global
     commands directory. Skills supersede them now, so anything that manifest still claims is

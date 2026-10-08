@@ -1,4 +1,4 @@
-"""Install the agent-memory-fleet OVERLAY procedures as Codex **Agent Skills**.
+"""Install the agent-memory-fleet procedures as Codex **Agent Skills**.
 
 Replaces the old ``setup-all-codex.sh``. That script had the right target and the right shape —
 Codex's documented user scope really is ``$HOME/.agents/skills``, not the ``~/.codex/skills``

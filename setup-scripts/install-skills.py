@@ -191,7 +191,7 @@ def install(
     root: Path | str = _ROOT,
     output_dir: Path | str | None = None,
 ) -> tuple[list[str], int]:
-    """Compile the overlay and install it as skills into ``target_dir``.
+    """Compile the repo and install it as skills into ``target_dir``.
 
     Returns ``(installed_skill_names, removed_count)``.
     """
@@ -344,18 +344,18 @@ def run(
     instructions_file: Path,
 ) -> int:
     """Shared ``main()`` body for a platform entry point."""
-    print(f"=== Setup agent-memory-fleet OVERLAY {platform} Skills ===\n")
-    print(f"Source (overlay): {_ROOT / 'output'}")
+    print(f"=== Setup agent-memory-fleet {platform} Skills ===\n")
+    print(f"Source (fleet): {_ROOT / 'output'}")
     print(f"Target:           {target_dir}\n")
 
     if not (_ROOT / "procedures").is_dir():
-        print(f"Error: overlay procedures directory not found: {_ROOT / 'procedures'}")
+        print(f"Error: fleet procedures directory not found: {_ROOT / 'procedures'}")
         return 1
 
     installed, removed = install(target_dir, manifest_name, sibling_manifest_names)
 
     if removed:
-        print(f"Cleaned up {removed} stale overlay skills\n")
+        print(f"Cleaned up {removed} stale fleet skills\n")
     if not installed:
         print("Error: no procedures compiled — nothing installed.")
         return 1
@@ -364,7 +364,7 @@ def run(
     print(register_path(instructions_file))
     print(register_env(instructions_file))
     print(register_layer_access(instructions_file, "FLEET", _FLEET_ACCESS_UUID))
-    print("\nInstalled overlay skills:")
+    print("\nInstalled fleet skills:")
     for name in installed:
         print(f"  {FOLDER_PREFIX}{name}")
     print(
