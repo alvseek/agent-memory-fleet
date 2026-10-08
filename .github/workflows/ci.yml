@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes no floating major tag past v7, so pin the exact release.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Test
+        run: uv run pytest -q
+
+      # The delivery pipeline must stay resolvable: every procedure compiles with no missing
+      # component and no missing template, so no unresolved reference can ship inside an
+      # installed command.
+      - name: Compile procedures (strict)
+        run: uv run python setup-scripts/compile-procedures.py --strict --quiet

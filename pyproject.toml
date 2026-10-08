@@ -1,0 +1,32 @@
+[project]
+name = "agent-memory-fleet"
+version = "0.1.0"
+description = "agent-memory-fleet (hermod-fleet) - the agent-to-agent fleet operations (ask-agent, delegate-agent, load-fleet, setup-fleet) and their compile/install tooling, a peer of the agent-memory core and the coding overlay."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+    { name = "Alviandi Widiasto", email = "alviandi@msn.com" }
+]
+requires-python = ">=3.12"
+
+# This repo ships markdown procedures + the compile/install tooling, not an installable
+# package - so it is never built/distributed.
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]  # pycodestyle, pyflakes, isort
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

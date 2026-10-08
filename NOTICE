@@ -1,0 +1,12 @@
+agent-memory-fleet
+Copyright 2026 Alviandi Widiasto (alvseek)
+
+This product - the agent fleet operations of the agent-memory framework
+(ask-agent, delegate-agent, load-fleet, setup-fleet) together with their
+compile and install tooling - is licensed under the Apache License, Version
+2.0. See the LICENSE file at the root of this repository, or
+http://www.apache.org/licenses/LICENSE-2.0
+
+This repo is one member of the Hermod family. It composes on top of the
+agent-memory memory core (agent-memory-system), a separate repository, and is
+a peer of the coding overlay (agent-memory-coding-skill).
