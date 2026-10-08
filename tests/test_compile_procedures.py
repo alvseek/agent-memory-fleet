@@ -72,7 +72,7 @@ def test_every_procedure_compiles(tmp_path: Path) -> None:
     reports = cc.compile_all(ROOT, tmp_path, verbose=False)
     sources = {p.stem for p in (ROOT / "procedures").glob("*.md")}
     assert {r.name for r in reports} == sources
-    # sources may be empty at scaffold time; populated in Phase 4 of the extraction plan.
+    assert sources  # the tree is not empty
     for r in reports:
         assert r.out_path.is_file()
 

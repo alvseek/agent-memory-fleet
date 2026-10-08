@@ -35,9 +35,8 @@ _DESCRIPTION_LIMIT = 1024
 # A YAML double-quoted scalar: quotes and backslashes escaped, nothing else bare.
 _QUOTED_SCALAR = re.compile(r'^description: "(?:[^"\\]|\\.)*"$')
 
-# Fleet procedures every healthy tree carries. Populated in Phase 4 of the extraction plan,
-# when the procedures land; empty at scaffold time so the tooling tests run green first.
-_KNOWN: set[str] = set()
+# Fleet procedures every healthy tree carries.
+_KNOWN = {"setup-fleet", "load-fleet", "ask-agent", "delegate-agent"}
 
 
 def _install(tmp_path: Path):

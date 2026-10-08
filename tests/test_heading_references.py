@@ -64,8 +64,7 @@ def _defined_headings(files: list[Path]) -> set[str]:
 
 def test_every_referenced_heading_is_defined() -> None:
     files = _authored_files()
-    if not files:
-        return  # scaffold state: nothing authored yet (populated in Phase 4)
+    assert files, "no authored docs found - the globs are wrong, not the docs"
 
     defined = _defined_headings(files) | _DEFINED_ELSEWHERE
     dangling: list[str] = []

@@ -30,9 +30,8 @@ _SIBLING_MANIFEST = ".agent-memory-manifest"
 # resolves at run time — which is what makes an installed template path safe.
 _PLACEHOLDER = "[path-to-agent-memory-fleet]"
 
-# Fleet commands every healthy tree carries. Populated in Phase 4 of the extraction plan;
-# empty at scaffold time so the tooling tests run green first.
-_KNOWN: set[str] = set()
+# Fleet commands every healthy tree carries.
+_KNOWN = {"setup-fleet", "load-fleet", "ask-agent", "delegate-agent"}
 
 
 def test_installs_the_full_command_set(tmp_path: Path) -> None:
