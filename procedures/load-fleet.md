@@ -18,7 +18,7 @@ If no arguments provided, auto-detect from `git rev-parse --show-toplevel` (base
 A handoff to another layer resolves through that layer's access declaration, which the caller reads. An **absent** declaration means `markdown`.
 
 - `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. `/ask-agent` uses it to awaken a teammate.
-- `[CODING-ACCESS]` / `[CODING-MCP-URL]`: how the coding overlay (`hermod-coding`) is reached. `/ask-agent` uses it to give a spawned teammate the coding awakening.
+- `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod-coding`) is reached. `/ask-agent` uses it to give a spawned teammate the coding awakening.
 - `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`hermod-fleet`) is reached.
 
 ## Procedure

@@ -28,7 +28,11 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 
 _MANIFEST_NAME = ".agent-memory-fleet-manifest"
-_SIBLING_MANIFEST_NAMES = [".agent-memory-manifest", ".agent-memory-coding-skill-manifest"]
+_SIBLING_MANIFEST_NAMES = [
+    ".agent-memory-manifest",
+    ".agent-memory-project-manifest",
+    ".agent-memory-local-manifest",
+]
 
 # Marks the overlay-path definition line in the global CLAUDE.md so re-runs never duplicate it.
 _PATH_DEF_UUID = "34ca859f-6586-4990-b729-23f834c8aaae"

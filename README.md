@@ -1,13 +1,13 @@
 # agent-memory-fleet
 
-The **agent-fleet add-on** of the [agent-memory](https://github.com/alvseek/agent-memory-system) framework, and a member of the **Hermod family** beside the coding overlay ([agent-memory-coding-skill](https://github.com/alvseek/agent-memory-coding-skill)).
+The **agent-fleet add-on** of the [agent-memory](https://github.com/alvseek/agent-memory-system) framework, and a member of the **Hermod family** beside the coding overlay ([agent-memory-project](https://github.com/alvseek/agent-memory-project)).
 
 This repo holds the agent-to-agent fleet operations: consult a teammate (`/ask-agent`), hand a task off (`/delegate-agent`), read the project's roster (`/load-fleet`), and define the team (`/setup-fleet`). They run by spawning and resuming Claude Code sessions, which is a mechanism a chat agent cannot use, so the fleet is its own capability rather than part of the coding overlay or the memory core.
 
 ## Relationship to the family
 
-- **Standalone, independent repo**: a peer of the core (`agent-memory-system`) and the coding overlay (`agent-memory-coding-skill`).
-- **One-way dependency**: this repo references the core (through `[AGENT-MEMORY-PATH]` and the core's `/awaken-agent`) and reads `[CODING-ACCESS]` to reach the coding overlay. Neither references this repo by name.
+- **Standalone, independent repo**: a peer of the core (`agent-memory-system`) and the coding overlay (`agent-memory-project`).
+- **One-way dependency**: this repo references the core (through `[AGENT-MEMORY-PATH]` and the core's `/awaken-agent`) and reads `[PROJECT-ACCESS]` to reach the coding overlay. Neither references this repo by name.
 - **Data stays central**: the fleet's roster (`fleet-agents.md`) and active-session map (`fleet-map.csv`) live in the `@agent-memory` store under `shared-memory/[project]/`, not in this repo.
 
 ## Contents

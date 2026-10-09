@@ -26,7 +26,7 @@ sys.modules["overlay_install_skills"] = sk
 _spec.loader.exec_module(sk)
 
 _MANIFEST = ".agent-memory-fleet-codex-manifest"
-_SIBLING_MANIFESTS = [".agent-memory-codex-manifest", ".agent-memory-coding-skill-codex-manifest"]
+_SIBLING_MANIFESTS = [".agent-memory-codex-manifest", ".agent-memory-project-codex-manifest"]
 
 # Antigravity documents 1024; staying inside the smaller published cap keeps one emitter
 # correct for both platforms.

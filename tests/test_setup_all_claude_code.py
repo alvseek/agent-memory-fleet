@@ -121,7 +121,7 @@ def test_any_sibling_manifest_protects_its_commands(tmp_path: Path) -> None:
     manifest.write_text(
         manifest.read_text(encoding="utf-8") + "coding-owned.md\n", encoding="utf-8"
     )
-    (target / ".agent-memory-coding-skill-manifest").write_text(
+    (target / ".agent-memory-project-manifest").write_text(
         "coding-owned.md\n", encoding="utf-8"
     )
 
