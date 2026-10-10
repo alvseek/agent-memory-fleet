@@ -12,7 +12,7 @@ files, so an installed slash command never points at a path the agent cannot rea
   content and takes away the source, which is why ``cp {source} ...`` had nothing to
   substitute. References are left exactly as authored and resolve at run time.
 - **Runtime refs are left alone**: ``[AGENT-MEMORY-PATH]/...`` (where memory lives),
-  ``[path-to-agent-memory-project]/fleet-scripts/*.sh`` (executables the agent runs),
+  ``[path-to-agent-memory-fleet]/fleet-scripts/*.sh`` (executables the agent runs),
   and template paths under ``plan-templates/`` and ``templates/``.
 
 Templates are still *resolved* at compile time: a reference naming a template that does not
