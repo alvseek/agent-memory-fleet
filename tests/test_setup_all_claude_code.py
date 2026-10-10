@@ -151,6 +151,26 @@ def test_overlay_path_registration_is_idempotent(tmp_path: Path) -> None:
     assert claude_md.read_text(encoding="utf-8").count(si._PATH_DEF_UUID) == 1
 
 
+def test_overlay_path_is_repointed_when_the_repo_moves(tmp_path: Path) -> None:
+    """A relocated clone must replace the stale CLAUDE.md path, not skip it."""
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text(
+        "# Global instructions\n"
+        "- **[path-to-agent-memory-fleet]** = `C:/Work/IM/agent-memory-old`"
+        f"  <!-- overlay-path-def {si._PATH_DEF_UUID} -->\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    moved = tmp_path / "agent-memory-fleet"
+
+    result = si._register_overlay_path(claude_md, moved)
+    body = claude_md.read_text(encoding="utf-8")
+    assert "Updated" in result
+    assert moved.as_posix() in body
+    assert "agent-memory-old" not in body
+    assert body.count(si._PATH_DEF_UUID) == 1
+
+
 def test_missing_claude_md_is_reported_not_created(tmp_path: Path) -> None:
     claude_md = tmp_path / "absent" / "CLAUDE.md"
     message = si._register_overlay_path(claude_md, ROOT)

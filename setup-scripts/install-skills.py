@@ -229,6 +229,21 @@ def install(
     return installed, removed
 
 
+def _repoint_overlay_path(text: str, uuid: str, path_value: str) -> str:
+    """Rewrite a recorded path definition if its value has moved.
+
+    The definition is keyed by ``uuid``, so a re-run normally no-ops. A relocated or renamed
+    clone leaves a stale path in place, and a stale placeholder resolves to a folder that no
+    longer exists. Matching the line by its UUID and replacing only the backticked value keeps
+    the update local, and never touches a sibling layer's definition.
+    """
+    pattern = re.compile(
+        rf"(?m)^(- \*\*\[path-to-agent-memory-fleet\]\*\* = `)[^`]*"
+        rf"(`\s*<!-- overlay-path-def {re.escape(uuid)} -->)$"
+    )
+    return pattern.sub(lambda m: m.group(1) + path_value + m.group(2), text)
+
+
 def register_path(instructions_file: Path, overlay_root: Path = _ROOT) -> str:
     """Define ``[path-to-agent-memory-fleet]`` in a platform's global instructions file.
 
@@ -246,10 +261,15 @@ def register_path(instructions_file: Path, overlay_root: Path = _ROOT) -> str:
             "        [path-to-agent-memory-fleet]. Run the memory-core setup for this\n"
             "        platform first (it creates the file), then re-run this installer."
         )
-    if _PATH_DEF_UUID in instructions_file.read_text(encoding="utf-8"):
+    path_value = Path(overlay_root).as_posix()
+    text = instructions_file.read_text(encoding="utf-8")
+    if _PATH_DEF_UUID in text:
+        repointed = _repoint_overlay_path(text, _PATH_DEF_UUID, path_value)
+        if repointed != text:
+            instructions_file.write_text(repointed, encoding="utf-8", newline="\n")
+            return f"  Updated [path-to-agent-memory-fleet] = {path_value}"
         return "  [path-to-agent-memory-fleet] already registered — skipped."
 
-    path_value = Path(overlay_root).as_posix()
     line = (
         f"\n- **[path-to-agent-memory-fleet]** = `{path_value}`"
         f"  <!-- overlay-path-def {_PATH_DEF_UUID} -->\n"
