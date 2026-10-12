@@ -29,6 +29,7 @@ _SIBLING_MANIFEST_NAMES = [
     ".agent-memory-project-opencode-manifest",
     ".agent-memory-local-opencode-manifest",
     ".agent-memory-wizards-opencode-manifest",
+    ".agent-memory-doc-opencode-manifest",
 ]
 # Comment tags this layer's own definitions carry in the global file.
 _OWN_MARKERS = [

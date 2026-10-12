@@ -47,6 +47,7 @@ MANIFEST_NAME = ".agent-memory-fleet-opencode-manifest"
 CORE_MANIFEST_NAME = ".agent-memory-opencode-manifest"
 PROJECT_MANIFEST_NAME = ".agent-memory-project-opencode-manifest"
 LOCAL_MANIFEST_NAME = ".agent-memory-local-opencode-manifest"
+DOC_MANIFEST_NAME = ".agent-memory-doc-opencode-manifest"
 
 
 def _config_base() -> Path:
@@ -99,7 +100,12 @@ def main(argv: list[str] | None = None) -> int:
         platform="OpenCode",
         target_dir=target,
         manifest_name=MANIFEST_NAME,
-        sibling_manifest_names=[CORE_MANIFEST_NAME, PROJECT_MANIFEST_NAME, LOCAL_MANIFEST_NAME],
+        sibling_manifest_names=[
+        CORE_MANIFEST_NAME,
+        PROJECT_MANIFEST_NAME,
+        LOCAL_MANIFEST_NAME,
+        DOC_MANIFEST_NAME,
+    ],
         instructions_file=base / "AGENTS.md",
     )
     if legacy_removed:
