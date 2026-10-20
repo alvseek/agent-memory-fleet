@@ -39,8 +39,8 @@ Report the roster and the fleet commands:
 
 - **Roster**: each teammate on the project's fleet (domain, specialty, when to consult).
 - **Commands**:
-  - `/ask-agent [Name|UUID]` - blocking consultation with a teammate
-  - `/delegate-agent [Name|UUID]` - background handoff of a task
+  - `/ask-agent [Name|SessionRef]` - blocking consultation with a teammate
+  - `/delegate-agent [Name|SessionRef]` - background handoff of a task
   - `/setup-fleet` - define the team (once per project)
 
 The active-session map (`fleet-map.csv`) is created automatically by the fleet scripts when agents first communicate.
