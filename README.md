@@ -1,38 +1,43 @@
 # agent-memory-fleet
 
-The **agent-fleet add-on** of the [agent-memory](https://github.com/alvseek/agent-memory-system) framework, and a member of the **Hermod family** beside the coding overlay ([agent-memory-project](https://github.com/alvseek/agent-memory-project)).
+The **fleet layer's content**: the four procedures an agent uses to consult a teammate, hand a task off, read the project's roster, and define the team, plus the roster template and the compiler that validates them.
 
-This repo holds the agent-to-agent fleet operations: consult a teammate (`/ask-agent`), hand a task off (`/delegate-agent`), read the project's roster (`/load-fleet`), and define the team (`/setup-fleet`). They run by spawning and resuming Claude Code sessions, which is a mechanism a chat agent cannot use, so the fleet is its own capability rather than part of the coding overlay or the memory core.
+The layer is **served, not installed**. [einherjar-server](https://github.com/alvseek/einherjar-server) vendors this repo and serves each procedure as an MCP prompt and through a `read_procedure` tool, and the roster template as a resource. Nothing here is copied into a harness's skills directory; `einherjar install` registers the server and removes anything an earlier installer left.
 
-## Relationship to the family
-
-- **Standalone, independent repo**: a peer of the core (`agent-memory-system`) and the coding overlay (`agent-memory-project`).
-- **One-way dependency**: this repo references the core (through `[AGENT-MEMORY-PATH]` and the core's `/awaken-agent`) and reads `[PROJECT-ACCESS]` to reach the coding overlay. Neither references this repo by name.
-- **Data stays central**: the fleet's roster (`fleet-agents.md`) and active-session map (`fleet-map.csv`) live in the `@agent-memory` store under `shared-memory/[project]/`, not in this repo.
+This repo is a member of the agent-memory family: Munnin is the memory core, Hermod the coding overlay, and Einherjar the fleet layer's server.
 
 ## Contents
 
-- **procedures/**: `ask-agent`, `delegate-agent`, `load-fleet`, `setup-fleet`
-- **fleet-scripts/**: `ask-agent.sh`, `delegate-agent.sh`, `wrap-up-agent.sh`, `fleet-common.sh`
-- **templates/**: `fleet-agents-template.md`, `fleet-map-template.csv`
+- **`procedures/`**: `ask-agent`, `delegate-agent`, `load-fleet`, `setup-fleet`
+- **`templates/`**: `fleet-agents-template.md`
+- **`setup-scripts/compile-procedures.py`**: the compiler, kept as **CI validation**. It inlines any component reference and fails a build on an unresolved template; the served text is compared against its output.
 
 ## Setup
 
-Install the **memory core first**, then this repo (and the coding overlay, which a spawned agent awakens through):
+Install the client and point one harness at the server:
 
-```bash
-python setup-scripts/setup-all-claude-code.py
-python setup-scripts/setup-all-codex.py
-python setup-scripts/setup-all-antigravity.py
-python setup-scripts/setup-all-opencode.py
+```sh
+uv tool install einherjar
+einherjar install --harness opencode   # or: --harness claude
+einherjar login
 ```
 
-On Windows, run the matching `setup-scripts\setup-all-*.bat`.
+`einherjar install` registers `https://einherjar.lok.quest/mcp` in that harness and removes the skills the old markdown installer left behind. `einherjar login` is one browser step per machine.
 
-Each installer keeps its own manifest and registers `[path-to-agent-memory-fleet]` plus the `[FLEET-ACCESS]` / `[FLEET-MCP-URL]` declaration in that platform's global instructions file.
+The memory core and the coding overlay are separate installs; a fleet agent awakens through both.
 
-> The fleet scripts shell out to the `claude` CLI, so a spawn only runs where Claude Code is installed, even though the procedures install on every harness.
+## Data
+
+- **The roster** (`fleet-agents`) is one `knowledge` record in the project's context, written by the agent through Munnin. `setup-fleet` creates it; `load-fleet` reads it.
+- **Sessions** are rows in Einherjar's own `fleet_session` table, keyed by `(user_id, machine, session_ref)`, written by the CLI on the machine where the agent runs.
+
+## Decisions
+
+- [ADR-001: The fleet transport contract](docs/adr/2026-10-21-fleet-transport-contract.md)
+- [ADR-002: The fleet data boundary](docs/adr/2026-10-21-fleet-data-boundary.md)
+- [ADR-003: The fleet layer is served, not installed](docs/adr/2026-10-21-fleet-served-layer.md)
+- [The plan that built it](plans/2026-10-20-agent-memory-fleet-fleet-delivery.md)
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE). See [MIGRATION.md](MIGRATION.md) for where this came from.
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

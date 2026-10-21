@@ -55,7 +55,7 @@ Deliver **Einherjar**: the fleet's served layer and hosted registry, plus the CL
 
 ### **SUCCESS CRITERIA**
 - [ ] `setup-fleet` and `load-fleet` read and write one Munnin `knowledge` record; no file form exists, and the overlay's roster pointer fires in the project.
-- [ ] A harness with no fleet clone reads all four procedures through `read_procedure` and both templates as resources; the served text equals the compiled text byte for byte.
+- [ ] A harness with no fleet clone reads all four procedures through `read_procedure` and the roster template as a resource; the served text equals the compiled text byte for byte.
 - [ ] `einherjar install` removes previously installed fleet skills and registers the MCP server, leaving no fleet skill behind.
 - [ ] `einherjar login` completes loopback PKCE once per machine and stores a refresh token in the OS keychain; later calls need no browser.
 - [ ] A consult on Claude Code and on OpenCode writes a session row keyed by `(user_id, machine, ref)`, spawns locally, and patches the row to completed or failed.
@@ -170,7 +170,7 @@ einherjar-deploy: instance, DSN secret, proxy host, release workflow
 - **Content face**, adapted from Hermod's loader:
   - The four procedures are served as **prompts**, so a person can invoke them by name.
   - The same procedures are readable through a **`read_procedure(name)` tool**, so an agent can fetch one mid-task. On OpenCode, where prompts become typed commands, this is the only path that keeps the fleet agent-invoked.
-  - Templates are served as **resources** (`fleet-agents-template`, `fleet-map-template`), so a procedure never points at a local clone.
+  - Templates are served as **resources** (`fleet-agents-template`), so a procedure never points at a local clone.
   - The loader composes from the content submodule on every request, and a test proves the served procedure equals the repo's compiled output byte for byte.
 - **Table** (owned by this repo, its own migration runner):
   - `fleet_session(uuid, user_id, project, machine, machine_label, session_ref, platform, domain, theme, status, created_at, updated_at, ended_at, error)`
@@ -379,7 +379,7 @@ sequenceDiagram
 - [ ] **Step 2.6**: The content face
   - **Action**: Serve the procedures and templates from the content submodule.
   - **Implementation**: Adapt Hermod's loader: procedures as prompts, a `read_procedure(name)` tool, templates as resources. Compose on every request. Pin the submodule.
-  - **Testing**: `list_procedures` returns the four; `read_procedure("ask-agent")` equals the repo's compiled output byte for byte; `list_resources` returns both templates; an unknown name returns not-served rather than an error.
+  - **Testing**: `list_procedures` returns the four; `read_procedure("ask-agent")` equals the repo's compiled output byte for byte; `list_resources` returns the roster template; an unknown name returns not-served rather than an error.
   - **Success Criteria**: A client with no local clone can read every procedure and template.
 
 ### Phase 3: The CLI (`einherjar-server`)
@@ -508,109 +508,109 @@ I have to use this document as my **ONLY** source of truth to execute and track 
 
 ### Phase 2: Einherjar service (`einherjar-server`, new repo)
 
-- [ ] **Step 2.1**: Repo scaffold, config and health
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.1**: Repo scaffold, config and health
+  - **Implementation Log**: Created the local `einherjar-server` repo: pyproject (fastmcp, fastapi, psycopg, uvicorn; uv_build, ruff, pytest), `src/einherjar` with config, app and `__main__`, `.env.example`, Dockerfile, README, NOTICE, and the fleet repo's LICENSE. Config: `EINHERJAR_DB_URL` required; host, port, issuer, public URL and the local bind acknowledgement. Local mode refuses a non-loopback bind or a public URL unless the acknowledgement is set. `/health` is open.
+  - **Testing Log**: `uv sync --python 3.12`; `ruff check` clean; `pytest` 9 passed (7 config-guard, 2 health). Real process: with `EINHERJAR_HOST=0.0.0.0` and no issuer it exits 1 with the guard message; with `127.0.0.1:8322` `/health` returns `{"status":"ok","service":"einherjar","version":"0.1.0"}`.
+  - **Success Criteria**: Pass. The process starts, answers health, and refuses the unauthenticated public bind.
+  - **Tech Debts**: Deviation: `DEFAULT_PUBLIC_BASE_URL` is `http://127.0.0.1:8220`, not the plan's production URL, because the local-mode guard would otherwise refuse its own default. The deploy sets the production URL explicitly.
+  - **Result**: Pass.
 
-- [ ] **Step 2.2**: Token verifier and tenant resolution
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.2**: Token verifier and tenant resolution
+  - **Implementation Log**: Added `auth/verifier.py` (LogtoAuthProvider ported from Hermod, with the `set_mcp_path` audience binding and the `_get_resource_url` override; `build_auth` returns None in local mode; `verify_bearer` for the HTTP face) and `business/tenant.py` (`claims_to_pair`, `TenantResolver` with `current_user_id` for MCP, `for_token` for HTTP, `resolve`/`resolve_existing` over `user_identity` and `account`). Munnin's semantics preserved: a minted user id, create-on-miss with a re-read, labels never used as lookup keys.
+  - **Testing Log**: Static-key issuer: an RS256 token for this resource verifies; one for another audience is refused; malformed headers return None; a missing iss/sub raises; `build_auth` binds the verifier audience to `mcp_resource_url` after `set_mcp_path`; local mode returns no provider. Against the local `munnin-postgres-1` (database `einherjar_test`): `resolve` creates once and reuses, `resolve_existing` agrees, an unmapped pair raises. 17 passed, ruff clean.
+  - **Success Criteria**: Pass. Every store call has a tenant, and no call guesses one.
+  - **Tech Debts**: The test database `einherjar_test` was created on the local Postgres container with minimal `user_identity` and `account` tables; Phase 2 tests use it, and it can be dropped once they are done.
+  - **Result**: Pass.
 
-- [ ] **Step 2.3**: `fleet_session` table and migrations
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.3**: `fleet_session` table and migrations
+  - **Implementation Log**: Added `data/repository.py`: the `fleet_session` DDL, an `einherjar_schema` marker, and a migration runner that applies each migration once in one transaction. `FleetRepository` exposes `upsert_session`, `update_session`, `get_session` and `list_sessions`, all tenant-scoped. The key is `(user_id, machine, session_ref)`; a replayed create never downgrades a terminal status.
+  - **Testing Log**: Against `einherjar_test`: schema applies twice; the same key is one row; a replayed create leaves a completed row completed; a foreign tenant cannot read or update a row and lists nothing; two users may share a machine and ref and get distinct rows; completion stamps `ended_at`; an unknown status is refused. 24 passed, ruff clean.
+  - **Success Criteria**: Pass. A second identical insert is an update, not a duplicate.
+  - **Tech Debts**: Migrations are inline SQL held in a tuple rather than files; one table does not justify a file loader yet, and the marker makes a later move mechanical.
+  - **Result**: Pass.
 
-- [ ] **Step 2.4**: HTTP write endpoints
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.4**: HTTP write endpoints
+  - **Implementation Log**: Added `api/http.py`: `SessionCreate` and `SessionUpdate` models with no user id in the body, `require_caller` (verified token to tenant), `require_contract` (`X-Einherjar-Contract: 1`), and `POST`/`PATCH`/`GET /v1/fleet/sessions`. `app.py` now wires the router, the resolver, the repository and the verifier onto `app.state`.
+  - **Testing Log**: 8 HTTP tests against the test database: the row belongs to the minted tenant (not the issuer subject); the same key updates in place; a missing token is 401; a token for another resource is 401; a missing contract is 400 with the upgrade message; completion stamps `ended_at` and reads back; a foreign row is 404 for both read and update; an unknown status is 422. 32 passed, ruff clean.
+  - **Success Criteria**: Pass. Tenant boundaries hold at the endpoint, not only in the query.
+  - **Tech Debts**: In local mode there is no tenant, so `/v1` answers 401 by design; the store is unusable without an issuer, which matches the family's local-mode rule.
+  - **Result**: Pass.
 
-- [ ] **Step 2.5**: Read-only MCP registry tools
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.5**: Read-only MCP registry tools
+  - **Implementation Log**: Added `business/queries.py` (tenant-scoped list/get) and `api/mcp.py` (FastMCP with instructions and exactly `fleet_sessions` and `fleet_session`, no write tool). `app.py` mounts the MCP face at `/mcp`, adopts its lifespan, serves the provider's discovery routes from the root, and normalises the slash forms with `api/paths.py` so the bare `/mcp` never answers a 307.
+  - **Testing Log**: An in-memory FastMCP client lists exactly the two read tools; the query layer never crosses tenants (list, get, unknown uuid); the whole app boots with the mount under `TestClient`; `/.well-known/oauth-protected-resource/mcp` answers 200 with the resource identifier; a bare `/mcp` does not redirect. 35 passed, ruff clean.
+  - **Success Criteria**: Pass. The MCP face cannot write.
+  - **Tech Debts**: The tools are exercised through the query layer, not through a token-carrying in-memory client; the HTTP face proves tenant resolution end to end, and the MCP transport's auth is FastMCP's own.
+  - **Result**: Pass.
 
-- [ ] **Step 2.6**: The content face
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 2.6**: The content face
+  - **Implementation Log**: Added `content/loader.py` (procedures read verbatim, both templates discovered across `.md` and `.csv`, `$ARGUMENTS` filled only when one is passed, titles and lead-sentence descriptions) and registered the content in `api/mcp.py`: four prompts, `read_procedure`, two resources (`resource://templates/<name>`) and `read_resource`. `build_app` now refuses to boot when the content checkout has no `procedures/`.
+  - **Testing Log**: Four procedures and two templates are discovered; the served text equals the fleet compiler's output byte for byte (the compiler is run into a temp directory and compared per file); an argument fills `$ARGUMENTS`; an in-memory client lists four prompts and two resources, returns the procedure through `read_procedure`, and answers `served: false` for an unknown name; the app refuses an absent checkout. 40 passed, ruff clean.
+  - **Success Criteria**: Pass. A client with no local clone can read every procedure and template.
+  - **Tech Debts**: The content root is a path (`EINHERJAR_CONTENT_ROOT`), not yet the pinned submodule; Phase 5.1 pins it at a pushed commit.
+  - **Result**: Pass.
 
 
 ### Phase 3: The CLI (`einherjar-server`)
 
-- [ ] **Step 3.1**: Port the two transport adapters
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 3.1**: Port the two transport adapters
+  - **Implementation Log**: Added `transport/adapters.py`: `TurnRequest`, `detect_platform` (override, then OpenCode's markers, then Claude), `platform_for_ref`, `resolve_model` (Claude alias direct; OpenCode alias through `EINHERJAR_MODEL_<ALIAS>`, unmapped yields no flag), `argv_for` with the two arms, and `run_turn` with an injectable runner. Neither arm knows about background.
+  - **Testing Log**: Nine tests: Claude new and resume; OpenCode new and resume producing the same call; a provider-qualified model; an unknown platform refused; detection through the override, `AI_AGENT`, `OPENCODE` and the fallback; UUID versus `ses_` ref shapes; model resolution per platform including an unmapped alias; `run_turn` capturing stdout and stderr through an injected runner. 49 passed, ruff clean.
+  - **Success Criteria**: Pass. Every argv the bash suite asserted is asserted again.
+  - **Tech Debts**: None.
+  - **Result**: Pass.
 
-- [ ] **Step 3.2**: Machine identity, config and the pending buffer
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 3.2**: Machine identity, config and the pending buffer
+  - **Implementation Log**: Added `state/paths.py` (config directory per platform, overridable), `state/machine.py` (a generated UUID written atomically, a hostname only as a label, and a corrupt file refused rather than replaced) and `state/pending.py` (JSONL append/read/replace, and a flush that keeps failures and re-reads so a row appended mid-flush is not dropped).
+  - **Testing Log**: The config directory override; the id is minted once and stable; a corrupt id raises instead of minting a new identity; the buffer round-trips; a corrupt line names its line number; a flush keeps the failed row and a row appended during the flush; replacing with nothing removes the file. 56 passed, ruff clean.
+  - **Success Criteria**: Pass. Killing the process at any point leaves the buffer replayable.
+  - **Tech Debts**: The flush is safe against one concurrent appender; a locking protocol is not needed for one CLI per machine and would be revisited if a daemon ever writes here.
+  - **Result**: Pass.
 
-- [ ] **Step 3.3**: `einherjar login` and token storage
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 3.3**: `einherjar login` and token storage
+  - **Implementation Log**: Added `auth/pkce.py` (verifier and S256 challenge, authorization URL carrying the resource, code exchange, refresh that keeps the old refresh token when the issuer omits one), `auth/tokens.py` (`Tokens`, a `TokenStore` over the OS keychain with a `0600` file fallback, and `clear`), and `auth/login.py` (`LoginFlow`: a real loopback listener, a state check, the exchange; and `login()` with an injectable browser and HTTP client).
+  - **Testing Log**: The challenge differs from the verifier and is S256; the authorization URL names the resource and client; the code exchanges for tokens; refresh keeps the old refresh token; the store round-trips in a file without a keychain and clears; the expiry window is honoured; the listener receives the code and rejects a state mismatch; a full `login` completes with a fake browser and a mock token endpoint. 65 passed, ruff clean.
+  - **Success Criteria**: Pass. One browser step per machine, silent afterwards.
+  - **Tech Debts**: The keychain path is exercised only through the file fallback in tests, because writing to the OS keychain in a test would leave residue; the real keychain is exercised at the deployed proof.
+  - **Result**: Pass.
 
-- [ ] **Step 3.4**: The commands
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 3.4**: The commands
+  - **Implementation Log**: Added `settings.py` (env-driven client settings, the resource derived from the base URL), `registry/client.py` (async client: one audience, contract header, a single silent refresh, a 401 asking for a login) and `cli.py` with `ask`, `delegate`, `result`, `wrap-up`, `sessions`, `login` and the detached `_turn`. A row is written before the spawn, buffered when the registry refuses it, and closed completed or failed after. `python -m einherjar` now dispatches the CLI when given arguments and the server otherwise. Added `GET /v1/fleet/sessions` for `sessions`, and made the upsert COALESCE metadata so a partial write cannot blank a theme or a domain.
+  - **Testing Log**: Registry: contract header and bearer, one refresh saved, missing and refused tokens, server detail surfaced, query built. CLI: target resolution by ref shape, the awakening naming the served overlay, a full ask (row, spawn, completion, ref then reply), an outage that buffers and still runs, a failed turn closing the row failed, wrap-up, a delegate payload, and the sessions listing. The partial upsert keeps stored metadata. 81 passed, ruff clean.
+  - **Success Criteria**: Pass. The four flows behave as designed, including the offline one.
+  - **Tech Debts**: `delegate` spawns `python -m einherjar _turn` with the same environment and writes its output to a file; `result` reads that file rather than a structured handle. That is the deliberate shape of the detached turn, not a gap.
+  - **Result**: Pass.
 
-- [ ] **Step 3.5**: Package, entry point and `einherjar install`
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 3.5**: Package, entry point and `einherjar install`
+  - **Implementation Log**: Added `install/harness.py`: the server is registered through each harness's own CLI (`opencode mcp add ... --global --url`, `claude mcp add --transport http ... --scope user`), a non-zero registration raises instead of reporting success, and the skills the old fleet manifest lists are removed before the manifest itself. Console scripts are now `einherjar` (CLI) and `einherjar-server` (server), and `python -m einherjar` dispatches by argument.
+  - **Testing Log**: OpenCode removes a skill folder and its manifest and invokes the right argv; Claude removes a command file; an unknown harness is refused; a failed registration raises and removes nothing; `python -m einherjar --help` exits 0. 86 passed, ruff clean.
+  - **Success Criteria**: Pass. One command installs and one configures the harness.
+  - **Tech Debts**: The harness CLIs must be on PATH; the failure names the command and its stderr rather than guessing.
+  - **Result**: Pass.
 
 
 ### Phase 4: Content and retirement (`agent-memory-fleet`)
 
-- [ ] **Step 4.1**: Procedures authored for serving
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 4.1**: Procedures authored for serving
+  - **Implementation Log**: Rewrote `ask-agent` and `delegate-agent` around the `einherjar` client: `ask` blocks and prints the ref then the reply; `delegate` starts the turn detached and `result` reads it back; neither names a script or a path. `load-fleet` now names the served prompts and the CLI, and states the layer is served (`[FLEET-ACCESS] = mcp`).
+  - **Testing Log**: `compile-procedures --strict`; a grep finds no `path-to-agent-memory-fleet`, `fleet-scripts`, `ask-agent.sh` or `AGENT-MEMORY-PATH` in any procedure.
+  - **Success Criteria**: Pass. No procedure names a shell script or a local path.
+  - **Tech Debts**: None.
+  - **Result**: Pass.
 
-- [ ] **Step 4.2**: Retire the markdown installers
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 4.2**: Retire the markdown installers
+  - **Implementation Log**: Deleted the four platform installers, the OpenCode uninstaller, `install-skills.py`, `fleet-scripts/` and `fleet-map-template.csv`, with their tests. Their duties moved to `einherjar install` and the CLI. Deviation, recorded deliberately: the bash scripts and the CSV map template were deleted too, because the CLI is now the only executor and the registry is the only map; leaving them would be a second implementation. The service's content test now expects the roster template alone, and the plan's criterion was corrected to match.
+  - **Testing Log**: The fleet repo's `pytest` is 19 passed (compiler and heading references), `ruff` clean, `compile-procedures --strict` clean. The service's `pytest` is 86 passed with the one-template content test.
+  - **Success Criteria**: Pass. There is one local setup path, and it is the CLI.
+  - **Tech Debts**: None.
+  - **Result**: Pass.
 
-- [ ] **Step 4.3**: Docs and declarations
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 4.3**: Docs and declarations
+  - **Implementation Log**: Rewrote `README.md` as the content repo's story: served by Einherjar, setup through `uv tool install` then `einherjar install` then `einherjar login`, the roster in memory and sessions in Einherjar. Added a `Served (2026-10-21)` section to `MIGRATION.md` recording the installers, scripts and CSV template retirements, and renamed the access declarations to `[PROJECT-ACCESS]`.
+  - **Testing Log**: The linked ADRs and plan exist; `compile-procedures --strict` clean; `ruff` clean.
+  - **Success Criteria**: Pass. A reader cannot conclude the procedures are installed.
+  - **Tech Debts**: None.
+  - **Result**: Pass.
 
 
 ### Phase 5: Deploy and end-to-end proof (`einherjar-deploy`)

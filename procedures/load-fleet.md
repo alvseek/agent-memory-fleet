@@ -19,7 +19,7 @@ A handoff to another layer resolves through that layer's access declaration, whi
 
 - `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. A consult uses it to awaken a teammate.
 - `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod`) is reached. A consult uses it to give a spawned teammate the coding awakening.
-- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached.
+- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached. It is served: the four procedures are prompts and a `read_procedure` tool on that server, and nothing is installed locally.
 
 ## Procedure
 
@@ -42,10 +42,10 @@ Report the roster and the fleet commands:
 
 - **Roster**: each teammate on the project's fleet (domain, specialty, when to consult, and the model when one is named).
 - **Commands**:
-  - `/ask-agent [Name|SessionRef]` - blocking consultation with a teammate
-  - `/delegate-agent [Name|SessionRef]` - background handoff of a task
-  - `/setup-fleet` - define the team (once per project)
+  - `einherjar ask [Name|SessionRef] --prompt ... --theme ...` - blocking consultation with a teammate
+  - `einherjar delegate ...` then `einherjar result <ref>` - background handoff of a task
+  - `/setup-fleet` - the served prompt that defines the team (once per project)
 
-This procedure reads the roster only. Active sessions are the fleet registry's business: they are written when a consult starts, and they are not part of this roster.
+The procedures are served by Einherjar: `/ask-agent` is a prompt on that server, and an agent can also fetch it with `read_procedure("ask-agent")`. This procedure reads the roster only; active sessions are the registry's business and are not part of it.
 
 ---
