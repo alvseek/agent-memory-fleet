@@ -629,12 +629,12 @@ I have to use this document as my **ONLY** source of truth to execute and track 
   - **Tech Debts**: None recorded.
   - **Result**: Pending.
 
-- [ ] **Step 5.3**: Deploy and verify
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 5.3**: Deploy and verify
+  - **Implementation Log**: Implemented the fixed loopback redirect (`http://127.0.0.1:8123/callback`, overridable) after the Logto docs confirmed exact redirect matching and no wildcard in a port for a Native app; pinned the deploy to that commit (`c7cf560`); ran the `einherjar-deploy` workflow with `command=setup` and `version=c7cf560`. Kamal started `einherjar-web-c7cf560` on port 8220 behind kamal-proxy at `einherjar.lok.quest`, with the DSN and SSH key from the repo secrets.
+  - **Testing Log**: `/health` answers `{"status":"ok","service":"einherjar","version":"0.1.0"}`; `/.well-known/oauth-protected-resource/mcp` returns the resource `https://einherjar.lok.quest/mcp` and the issuer `https://auth.lok.quest/oidc`; `/mcp` without a token answers 401; the container is `Up`; `einherjar.lok.quest` resolves to `198.44.26.137` (not proxied).
+  - **Success Criteria**: Pass. The service answers and refuses correctly.
+  - **Tech Debts**: The Logto API resource and Native-app client are not registered yet, so no token can be minted and the end-to-end proof cannot run. `fleet_session` is created on the first authenticated store call, so the table does not exist yet.
+  - **Result**: Pass.
 
 - [ ] **Step 5.4**: End-to-end proof
   - **Implementation Log**: Not started.
