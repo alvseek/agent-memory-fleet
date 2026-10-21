@@ -1,15 +1,15 @@
 # Setup Fleet
 
-Initialize the fleet agents directory for a project. Creates `fleet-agents.md` (who's who) in the project's shared memory folder. Run once per project initiation. The `fleet-map.csv` (active sessions) is auto-created by the fleet scripts when agents first communicate.
+Create the project's fleet roster: who is on the team, what each is expert in, when to consult them, and which model each runs. The roster is **one memory record** in the project's context, not a file. Run this once per project, and run it again to change the team.
 
 ## Arguments
 
 `$ARGUMENTS`
 
-- `/setup-fleet [project-name]` → Initialize fleet for the given project
-- `/setup-fleet` → Will auto-detect project name from git repo or ask
+- `/setup-fleet [project-name]` → Create or update the roster for the given project
+- `/setup-fleet` → Auto-detect the project from the git repo, or ask
 
-If no arguments provided, try to auto-detect from git repo name. If that fails, ask: "What is the project name?"
+If no arguments provided, try to auto-detect from `git rev-parse --show-toplevel` (basename). If that fails, ask: "What is the project name?"
 
 ---
 
@@ -17,46 +17,81 @@ If no arguments provided, try to auto-detect from git repo name. If that fails, 
 
 ### Step 1: Resolve Project Name
 
-Auto-detect from `git rev-parse --show-toplevel` (basename) or use the provided argument.
+Auto-detect from `git rev-parse --show-toplevel` (basename) or use the provided argument. The project name is the key the roster is filed under, so it must be the repository's identity, not a folder nickname.
 
-### Step 2: Create Project Shared Memory Directory
+### Step 2: Read the Knowledge Template Stamp
 
-Create the directory if it doesn't exist:
-`[AGENT-MEMORY-PATH]/shared-memory/[project-name]/`
+Call `read_resource("knowledge-file-template")` and take the value on its `template_version:` line. A `knowledge` record is refused without the stamp matching the template it was built against, so read it now instead of guessing or reusing an old value.
 
-### Step 3: Create Fleet Agents File
+### Step 3: Find an Existing Roster
 
-Copy the template and replace the project name:
-- Source: `[path-to-agent-memory-fleet]/templates/fleet-agents-template.md`
-- Target: `[AGENT-MEMORY-PATH]/shared-memory/[project-name]/fleet-agents.md`
+Call `list_shared_context(project="<project>")` and look for the row whose `theme` is `fleet-agents`.
 
-Replace `{PROJECT-NAME}` with the actual project name.
+- **Found**: this is an update. Keep its `uuid`, and read the current body with `get(uuid)` before rewriting it.
+- **Not found**: this is a create.
 
-### Step 4: Fill Fleet Agents
+### Step 4: Define the Team
 
-Present the fleet-agents.md to [USER-NAME] and ask them to define the team:
+Present the roster's shape and ask [USER-NAME] to fill it:
 
-"I've created the fleet directory for **[project-name]**. Let's define the team.
-
-For each agent that will work on this project, I need:
-- **Agent Domain**: The agent name (e.g., Backend Django, Frontend Nextjs, Software Architect)
-- **Specialty**: What they're expert in
-- **When to Consult**: When other agents should ask this one for help
+"I've opened the roster for **[project-name]**. For each agent that will work on this project, I need:
+- **Agent Domain**: the agent name (e.g., Backend Django, Frontend Nextjs, Software Architect)
+- **Specialty**: what they are expert in
+- **When to Consult**: when another agent should ask them for help
+- **Model**: optional; leave blank for the platform default
 
 Which agents will be on this project's fleet?"
 
-Fill the table based on [USER-NAME]'s input. Remove the example rows.
+Fill a table in this shape:
 
-### Step 5: Confirm
+```
+| Agent Domain | Specialty | When to Consult | Model |
+|---|---|---|---|
+| Backend Django | Django models, APIs, data modeling | Backend implementation, API design | |
+```
 
-Show the completed fleet-agents.md to [USER-NAME] for confirmation.
+The Model column is optional. On Claude Code it holds an alias (`haiku`, `sonnet`, `opus`); on OpenCode it holds `provider/model`. A blank value means the platform's default model.
+
+### Step 5: Write the Roster
+
+**Create** when no row was found. One call, no file:
+
+```
+insert(
+  scope="shared",
+  record_type="knowledge",
+  project="<project>",
+  title="fleet-agents",
+  content="<the completed table>",
+  content_summary="The project's fleet roster: who is on the team, and when to consult them.",
+  template_version="<the stamp from Step 2>",
+  tags=["fleet", "roster"]
+)
+```
+
+`scope="shared"` is the project's cross-agent layer: a roster belongs to the team, not to one agent. The body is the table alone; the title and the summary are what a listing shows, so the body does not repeat them as a heading.
+
+**Update** when a row was found. Replace the body in place:
+
+1. `get(uuid)` and keep the exact body you read.
+2. `edit(uuid, old_string="<the old body>", new_string="<the new table>")`. The old string must match byte for byte, so paste the body you just read rather than retyping it.
+3. If the old summary no longer describes the roster, call `edit_metadata(uuid, content_summary="...")`.
+
+Do not delete and re-insert. That changes the uuid, and a roster's identity should survive an edit.
+
+### Step 6: Confirm
 
 Report:
+
 ```
-Fleet initialized for [project-name]:
-  - Fleet agents: [AGENT-MEMORY-PATH]/shared-memory/[project-name]/fleet-agents.md
+Fleet saved for [project]:
+  - Record: fleet-agents (uuid [uuid])
   - Agents defined: [count]
-  - Fleet map: Will be auto-created when agents first communicate
+  - Nothing written to disk: the roster lives in the project's context.
 ```
 
+If this was an update, say so, and mention the previous agent count if it changed.
+
 ---
+
+**Related**: `/load-fleet` reads this record; `/ask-agent` and `/delegate-agent` consult the agents it names.

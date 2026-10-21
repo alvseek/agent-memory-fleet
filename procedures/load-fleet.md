@@ -15,11 +15,11 @@ If no arguments provided, auto-detect from `git rev-parse --show-toplevel` (base
 
 ## Layer access
 
-A handoff to another layer resolves through that layer's access declaration, which the caller reads. An **absent** declaration means `markdown`.
+A handoff to another layer resolves through that layer's access declaration, which the caller reads.
 
-- `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. `/ask-agent` uses it to awaken a teammate.
-- `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod-coding`) is reached. `/ask-agent` uses it to give a spawned teammate the coding awakening.
-- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`hermod-fleet`) is reached.
+- `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. A consult uses it to awaken a teammate.
+- `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod`) is reached. A consult uses it to give a spawned teammate the coding awakening.
+- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached.
 
 ## Procedure
 
@@ -29,20 +29,23 @@ Auto-detect from `git rev-parse --show-toplevel` (basename) or use the provided 
 
 ### Step 2: Read the Roster
 
-Read `[AGENT-MEMORY-PATH]/shared-memory/[project-name]/fleet-agents.md` (silent skip if missing).
+Call `list_shared_context(project="<project>")` and find the row whose `theme` is `fleet-agents`.
 
-If it does not exist, report *"No fleet for this project yet - use `/setup-fleet` to define one."* and stop.
+- **Absent**: report *"No fleet for this project yet. Use `/setup-fleet` to define one."* and stop.
+- **Present**: read its body with `get(uuid)`. That body is the roster table.
+
+There is no file to fall back to. The roster has one home, the project's context, and an absent row means the project has no fleet.
 
 ### Step 3: Report
 
 Report the roster and the fleet commands:
 
-- **Roster**: each teammate on the project's fleet (domain, specialty, when to consult).
+- **Roster**: each teammate on the project's fleet (domain, specialty, when to consult, and the model when one is named).
 - **Commands**:
   - `/ask-agent [Name|SessionRef]` - blocking consultation with a teammate
   - `/delegate-agent [Name|SessionRef]` - background handoff of a task
   - `/setup-fleet` - define the team (once per project)
 
-The active-session map (`fleet-map.csv`) is created automatically by the fleet scripts when agents first communicate.
+This procedure reads the roster only. Active sessions are the fleet registry's business: they are written when a consult starts, and they are not part of this roster.
 
 ---
