@@ -615,12 +615,12 @@ I have to use this document as my **ONLY** source of truth to execute and track 
 
 ### Phase 5: Deploy and end-to-end proof (`einherjar-deploy`)
 
-- [ ] **Step 5.1**: The deploy repo
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 5.1**: The deploy repo
+  - **Implementation Log**: Pushed `agent-memory-fleet` to `main` at `cf8c4d1`; created the public `alvseek/einherjar-server`, pushed it, added `agent-memory-fleet` as its content submodule pinned at that commit, and added CI (Postgres service, the memory tables the service reads, ruff, pytest) plus the image workflow (`ghcr.io/alvseek/einherjar`, short-SHA tags, the `service=einherjar` label Kamal needs). Created the private `alvseek/einherjar-deploy` with the Kamal config (port 8220, host `einherjar.lok.quest`, `/health`, the DSN secret, `FORWARDED_ALLOW_IPS`) and the manual setup/deploy/rollback workflow; pinned `einherjar-server` at `86358aa`. Set the repo secrets from the box: `EINHERJAR_DB_URL` read from the running Hermod container's environment, and `SSH_PRIVATE_KEY` from the local deploy key.
+  - **Testing Log**: CI green on `86358aa` (86 tests against a real Postgres, image built); `git submodule status --recursive` resolves both pins (`einherjar-server` `86358aa`, `agent-memory-fleet` `cf8c4d1`); `docker manifest inspect ghcr.io/alvseek/einherjar:86358aa` resolves; the deploy repo has both secrets listed.
+  - **Success Criteria**: Pass. The instance is reproducible from the pin alone.
+  - **Tech Debts**: Two external prerequisites remain before the instance is reachable: a DNS A record for `einherjar.lok.quest` pointing at `198.44.26.137` with the Cloudflare proxy off, and the Logto API resource plus CLI client registration.
+  - **Result**: Pass.
 
 - [ ] **Step 5.2**: Logto registration
   - **Implementation Log**: Not started.
