@@ -622,12 +622,12 @@ I have to use this document as my **ONLY** source of truth to execute and track 
   - **Tech Debts**: Two external prerequisites remain before the instance is reachable: a DNS A record for `einherjar.lok.quest` pointing at `198.44.26.137` with the Cloudflare proxy off, and the Logto API resource plus CLI client registration.
   - **Result**: Pass.
 
-- [ ] **Step 5.2**: Logto registration
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+- [x] **Step 5.2**: Logto registration
+  - **Implementation Log**: Added `("Einherjar MCP", "https://einherjar.lok.quest/mcp")` to `deploy/configure-tenant.py`'s `AUDIENCES` in the authentra repo, then ran `deploy/register-resources.py` on the authentra box: `api resource 'https://einherjar.lok.quest/mcp': created -> 201, match=True`. Added `deploy/add-einherjar-client.py`, which registers the CLI as a **Native** app — a public client, so there is no secret to hold — with redirect `http://127.0.0.1:8123/callback`, matched by name so a re-run corrects rather than duplicates: `POST /applications -> 200`, client id `gpghr678hhojnw7w4jj55`. That id is now `einherjar-server`'s `DEFAULT_CLIENT_ID`, because `POST /applications` generates the id and ignores a supplied one. The authentra README's audience row now covers all three servers and its client table carries the CLI.
+  - **Testing Log**: The tenant lists six resources and the new identifier is character for character. A probe of `GET /oidc/auth` against the live tenant, sending the CLI's own parameters: the CLI's request answers `303 /sign-in?app_id=gpghr678hhojnw7w4jj55`, the **same request on a different loopback port** answers the same 303, and `https://einherjar.lok.quest/mcp/` is refused with `invalid_target`. The middle result corrects Step 5.3's log, which says a Native app gets no wildcard in the port: Logto does accept any port on `127.0.0.1`, and the fixed port is a choice for determinism rather than a constraint. `einherjar-server`: 68 passed, 20 skipped, `ruff` clean.
+  - **Success Criteria**: Registration met. The acceptance half — a token for this resource accepted, another refused — is observed in Step 5.4, since minting one needs the browser sign-in that step owns.
+  - **Tech Debts**: Proven only as far as the authorization request. Whether the CLI receives a refresh token is unproven: it asks for `offline_access`, which OIDC Core grants only alongside a consent prompt, and Logto 1.44.0's consent-prompt injection is scoped to dynamic (CIMD) clients rather than registered native apps.
+  - **Result**: Pass on the registration; the token acceptance check moves to Step 5.4.
 
 - [x] **Step 5.3**: Deploy and verify
   - **Implementation Log**: Implemented the fixed loopback redirect (`http://127.0.0.1:8123/callback`, overridable) after the Logto docs confirmed exact redirect matching and no wildcard in a port for a Native app; pinned the deploy to that commit (`c7cf560`); ran the `einherjar-deploy` workflow with `command=setup` and `version=c7cf560`. Kamal started `einherjar-web-c7cf560` on port 8220 behind kamal-proxy at `einherjar.lok.quest`, with the DSN and SSH key from the repo secrets.
