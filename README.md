@@ -17,12 +17,12 @@ This repo is a member of the agent-memory family: Munnin is the memory core, Her
 Install the client and point one harness at the server:
 
 ```sh
-uv tool install einherjar
+uv tool install git+https://github.com/alvseek/einherjar-server
 einherjar install --harness opencode   # or: --harness claude
 einherjar login
 ```
 
-`einherjar install` registers `https://einherjar.lok.quest/mcp` in that harness and removes the skills the old markdown installer left behind. `einherjar login` is one browser step per machine.
+There is no package index for the client, so the install names its source repository. `einherjar install` registers `https://einherjar.lok.quest/mcp` in that harness and removes the skills the old markdown installer left behind. `einherjar login` is one browser step per machine, and the token it stores lasts an hour.
 
 The memory core and the coding overlay are separate installs; a fleet agent awakens through both.
 

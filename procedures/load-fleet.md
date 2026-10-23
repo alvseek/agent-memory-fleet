@@ -44,7 +44,11 @@ Report the roster and the fleet commands:
 - **Commands**:
   - `einherjar ask [Name|SessionRef] --prompt ... --theme ...` - blocking consultation with a teammate
   - `einherjar delegate ...` then `einherjar result <ref>` - background handoff of a task
+  - `einherjar sessions [--status active|completed|failed]` - the consults this machine has recorded, and how each ended
+  - `einherjar wrap-up <ref>` - conclude a teammate's session on purpose, saving its memory
   - `/setup-fleet` - the served prompt that defines the team (once per project)
+
+Running one of those needs two things on the machine: `einherjar` on `PATH` (`uv tool install git+https://github.com/alvseek/einherjar-server`), and a sign-in from `einherjar login`, which lasts an hour and is not refreshed.
 
 The procedures are served by Einherjar: `/ask-agent` is a prompt on that server, and an agent can also fetch it with `read_procedure("ask-agent")`. This procedure reads the roster only; active sessions are the registry's business and are not part of it.
 
