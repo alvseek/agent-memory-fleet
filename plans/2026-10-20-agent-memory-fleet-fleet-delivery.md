@@ -637,18 +637,18 @@ I have to use this document as my **ONLY** source of truth to execute and track 
   - **Result**: Pass.
 
 - [ ] **Step 5.4**: End-to-end proof
-  - **Implementation Log**: Not started.
-  - **Testing Log**: Not started.
-  - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+  - **Implementation Log**: Partial. Registered the resource and the CLI client, made an OpenCode turn default to `opencode-go/deepseek-v4.1-flash` after the platform default was refused at spawn, and rewrote the served procedures around the consult lifecycle (precondition, target, execute, close). The procedure text was carried through the pin, the image and a deploy, so `read_procedure` serves it.
+  - **Testing Log**: One blocking consult from OpenCode completed with its row closed `completed` (`ses_bdea9c324e4c4eb4ba792d27dc262c87`), using the model the client chose rather than one passed by hand, and `einherjar sessions` lists it. The read path was proven twice: `list_procedures` answered before the deploy, and both procedures were read back after it. Not exercised: a consult from Claude Code, a delegated turn collected through `result`, and the second-account isolation check.
+  - **Success Criteria**: Pending. The OpenCode half is observed; the Claude Code half and the second account are not.
+  - **Tech Debts**: Claude Code's client is registered but was never authenticated · two-user isolation is unit-tested only · a consult's sign-in lasts an hour with no refresh token, so a long session needs a second browser step.
+  - **Result**: Partial.
 
 - [ ] **Step 5.5**: Wrap-up and ADR links
-  - **Implementation Log**: Not started.
+  - **Implementation Log**: The three ADRs are linked from the README (`docs/adr/` holds exactly those three). The probe wrap-up has not run: it needs a fresh `einherjar login`, because the CLI's token expired at 13:37 the same day.
   - **Testing Log**: Not started.
   - **Success Criteria**: Pending.
-  - **Tech Debts**: None recorded.
-  - **Result**: Pending.
+  - **Tech Debts**: The probe wrap-up is owed one browser sign-in.
+  - **Result**: Partial.
 
 ---
 
