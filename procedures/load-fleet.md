@@ -19,7 +19,7 @@ A handoff to another layer resolves through that layer's access declaration, whi
 
 - `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. A consult uses it to awaken a teammate.
 - `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod`) is reached. A consult uses it to give a spawned teammate the coding awakening.
-- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached. It is served: the four procedures are prompts and a `read_procedure` tool on that server, and nothing is installed locally.
+- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached. It is served: the five procedures are prompts and a `read_procedure` tool on that server, and nothing is installed locally.
 
 ## Procedure
 
@@ -44,11 +44,12 @@ Report the roster and the fleet commands:
 - **Commands**:
   - `einherjar ask [Name|SessionRef] --prompt ... --theme ...` - blocking consultation with a teammate
   - `einherjar delegate ...` then `einherjar result <ref>` - background handoff of a task
+  - `einherjar spawn --prompt ... [--background]` - a fresh anonymous session with no fleet awakening
   - `einherjar sessions [--status active|completed|failed]` - the consults this machine has recorded, and how each ended
   - `einherjar wrap-up <ref>` - conclude a teammate's session on purpose, saving its memory
   - `/setup-fleet` - the served prompt that defines the team (once per project)
 
-Running one of those needs two things on the machine: `einherjar` on `PATH` (`uv tool install git+https://github.com/alvseek/einherjar-server`), and a sign-in from `einherjar login`, which lasts an hour and is not refreshed.
+Running one of those needs two things on the machine: `einherjar` on `PATH`, installed from the wheel this server serves as `resource://client/install` (or `read_resource("client-install")`) reports, and a sign-in from `einherjar login`.
 
 The procedures are served by Einherjar: `/ask-agent` is a prompt on that server, and an agent can also fetch it with `read_procedure("ask-agent")`. This procedure reads the roster only; active sessions are the registry's business and are not part of it.
 

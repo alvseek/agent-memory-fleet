@@ -8,8 +8,13 @@ A delegation and a consult are the same turn, and the difference is only whether
 
 Two things must be true on this machine, and neither is checked by the delegation itself:
 
-- **The client is installed.** `einherjar` on `PATH`, installed from the source repository: `uv tool install git+https://github.com/alvseek/einherjar-server`. There is no package index for it, so a bare `uv tool install einherjar` cannot work. If the command is missing, report that line instead of proceeding.
-- **This machine is signed in.** `einherjar login` opens the browser at `auth.lok.quest` and returns to `http://127.0.0.1:8123/callback`, then prints the token's expiry. The token lasts an hour and this client is issued no refresh token, so a `401` means sign in again. A delegation started near the end of that hour still runs — the turn is a local process once it is spawned — but the `result` read an hour later needs a fresh sign-in.
+- **The client is installed.** Read the install resource this server serves —
+  `resource://client/install` as an MCP resource, or the `read_resource("client-install")` tool —
+  and follow it: it reports the current wheel URL, its hash and the exact
+  `uv tool install --force` command for this deployment. Install from that URL, never from a
+  repository. If `einherjar` is missing from `PATH`, report the instruction you read instead of
+  proceeding.
+- **This machine is signed in.** `einherjar login` opens the browser at `auth.lok.quest`, returns to `http://127.0.0.1:8123/callback`, and asks for consent explicitly so the issuer grants `offline_access`; the client keeps the refresh token it receives and renews the access token itself, and signing in again is only needed when that stored credential expires or is revoked. A delegation started just before the access token expires still runs — the turn is a local process once it is spawned, and the refresh happens on its own — and `result` reads its captured output from disk, so reading it later needs no sign-in.
 
 `einherjar install --harness claude|opencode` is the one-time setup per harness: it registers the MCP server that serves this procedure and removes the skills the old installer left. No copy of these procedures is installed anywhere.
 
@@ -87,9 +92,9 @@ Do not block, and do not sleep waiting for it. Continue your own work; the deleg
 einherjar result <SessionRef>
 ```
 
-That prints the captured output. Until the turn has written it, it answers `no recorded output for <ref>` and exits 1, so treat that as "not finished yet" rather than a failure, and read it again later.
+That prints the captured output. The client creates that file when it spawns the turn, so a background ref answers with whatever has arrived — empty while the turn is still running, more on a later read. It never says "still running". `no recorded output for <ref>` means this machine holds no file for that ref at all: a mistyped ref, a turn spawned on another machine, or one that was never started detached — not proof that a background turn is merely unfinished.
 
-`einherjar sessions [--status active|completed|failed] [--project <name>]` is how you tell which case you are in: the row reads `active` while the detached turn runs and is closed `completed` or `failed` when it ends, with the harness's error attached to a failure. The list prints ref, platform, status, theme and machine label, in that order.
+`einherjar sessions [--status active|completed|failed] [--project <name>]` reports the rows this machine recorded: a row reads `active` while the detached turn runs and is closed `completed` or `failed` when it ends, with the harness's error attached to a failure. When tracking is buffered — an outage, or a `401` — the row can be missing or stale, so it is a useful signal rather than proof. The list prints ref, platform, status, theme and machine label, in that order.
 
 ## Ending the Session
 
@@ -99,7 +104,7 @@ A delegation ends itself too: when the detached turn returns, the row is closed 
 
 ## When It Goes Wrong
 
-- **`401` or "authentication required"** — the token expired. Run `einherjar login` and repeat the command; a row that could not be written is buffered and flushed on the next call, so the intended consult is not lost.
+- **`401` or "authentication required"** — the token expired. The detached turn still runs: sign-in covers tracking, not execution. Read `result` (and the row, if the registry has one) before retrying, then run `einherjar login` to restore tracking and replay the buffered row. Delegate again only if the turn itself failed — repeating a completed delegation duplicates the work.
 - **The turn fails immediately** — `result` still prints whatever was captured, and the row is `failed` with the harness's stderr attached. `einherjar sessions --status failed` finds it. A missing harness on `PATH` and a model the harness refuses both look like this.
 - **The row never appears** — a registry that cannot be reached is buffered rather than dropped; the buffered row flushes on the next authenticated call, so `sessions` may show it later than the delegation itself.
 

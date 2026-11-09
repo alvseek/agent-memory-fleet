@@ -8,8 +8,13 @@ A consult and a delegation are the same turn, and the difference is only whether
 
 Two things must be true on this machine, and neither is checked by the consult itself:
 
-- **The client is installed.** `einherjar` on `PATH`, installed from the source repository: `uv tool install git+https://github.com/alvseek/einherjar-server`. There is no package index for it, so a bare `uv tool install einherjar` cannot work. If the command is missing, report that line instead of proceeding.
-- **This machine is signed in.** `einherjar login` opens the browser at `auth.lok.quest` and returns to `http://127.0.0.1:8123/callback`, then prints the token's expiry. The token lasts an hour and this client is issued no refresh token, so a `401` during a consult means sign in again, not that something is broken.
+- **The client is installed.** Read the install resource this server serves —
+  `resource://client/install` as an MCP resource, or the `read_resource("client-install")` tool —
+  and follow it: it reports the current wheel URL, its hash and the exact
+  `uv tool install --force` command for this deployment. Install from that URL, never from a
+  repository. If `einherjar` is missing from `PATH`, report the instruction you read instead of
+  proceeding.
+- **This machine is signed in.** `einherjar login` opens the browser at `auth.lok.quest`, returns to `http://127.0.0.1:8123/callback`, and asks for consent explicitly: the issuer withholds `offline_access` without that prompt, so consent is what makes it issue a refresh token. The client keeps that token and renews the access token on its own; sign in again only when the stored credential has expired or been revoked. A `401` therefore means the stored sign-in is no longer usable: sign in again. It does not abort the consult itself — it only leaves the row untracked until the next signed-in call.
 
 `einherjar install --harness claude|opencode` is the one-time setup per harness: it registers the MCP server that serves this procedure and removes the skills the old installer left. No copy of these procedures is installed anywhere.
 
@@ -86,7 +91,7 @@ Two commands cover everything after that:
 
 ## When It Goes Wrong
 
-- **`401` or "authentication required"** — the token expired. Run `einherjar login` and repeat the consult; nothing was lost, because a row that could not be written is buffered and flushed on the next call.
+- **`401` or "authentication required"** — the token expired. The consult still ran and its reply is already in front of you: a `401` affects tracking, not the turn. Run `einherjar login` to restore tracking and replay the buffered row, then check the row's status. Do not repeat the consult for this reason — repeating one that already completed duplicates the work.
 - **The turn fails immediately** — the client prints the harness's stderr and closes the row `failed`. `einherjar sessions --status failed` finds that row again. A missing harness on `PATH` and a model the harness refuses both look like this.
 - **The reply never comes** — the client waits up to five minutes for a sign-in callback only at login; a consult waits for the turn itself, so a hung turn is a hung harness. Check the ref with `einherjar sessions` before assuming the row was never written.
 

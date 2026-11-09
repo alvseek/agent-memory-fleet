@@ -1,7 +1,7 @@
 [project]
 name = "agent-memory-fleet"
 version = "0.1.0"
-description = "agent-memory-fleet (hermod-fleet) - the agent-to-agent fleet operations (ask-agent, delegate-agent, load-fleet, setup-fleet) and their compile/install tooling, a peer of the agent-memory core and the coding overlay."
+description = "agent-memory-fleet (hermod-fleet) - the fleet operations (ask-agent, delegate-agent, spawn, load-fleet, setup-fleet) and their compile/install tooling, a peer of the agent-memory core and the coding overlay."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]

@@ -1,6 +1,6 @@
 # agent-memory-fleet
 
-The **fleet layer's content**: the four procedures an agent uses to consult a teammate, hand a task off, read the project's roster, and define the team, plus the roster template and the compiler that validates them.
+The **fleet layer's content**: the five procedures an agent uses to consult a teammate, hand a task off, start an anonymous session, read the project's roster, and define the team, plus the roster template and the compiler that validates them.
 
 The layer is **served, not installed**. [einherjar-server](https://github.com/alvseek/einherjar-server) vendors this repo and serves each procedure as an MCP prompt and through a `read_procedure` tool, and the roster template as a resource. Nothing here is copied into a harness's skills directory; `einherjar install` registers the server and removes anything an earlier installer left.
 
@@ -8,21 +8,29 @@ This repo is a member of the agent-memory family: Munnin is the memory core, Her
 
 ## Contents
 
-- **`procedures/`**: `ask-agent`, `delegate-agent`, `load-fleet`, `setup-fleet`
+- **`procedures/`**: `ask-agent`, `delegate-agent`, `spawn`, `load-fleet`, `setup-fleet`
 - **`templates/`**: `fleet-agents-template.md`
 - **`setup-scripts/compile-procedures.py`**: the compiler, kept as **CI validation**. It inlines any component reference and fails a build on an unresolved template; the served text is compared against its output.
 
 ## Setup
 
-Install the client and point one harness at the server:
+The client is its own package, published by the server rather than by a package index. Read the
+running server's install resource — `resource://client/install` as an MCP resource, or
+`GET /v1/resources/cli` on the same server — and follow the command it reports:
 
 ```sh
-uv tool install git+https://github.com/alvseek/einherjar-server
+uv tool install --force <the wheel URL that endpoint reports>
 einherjar install --harness opencode   # or: --harness claude
 einherjar login
 ```
 
-There is no package index for the client, so the install names its source repository. `einherjar install` registers `https://einherjar.lok.quest/mcp` in that harness and removes the skills the old markdown installer left behind. `einherjar login` is one browser step per machine, and the token it stores lasts an hour.
+That endpoint describes the one wheel bundled with the running server: its real version, size,
+SHA-256, URL and install command, so what you install is current for that deployment and need not
+match the server's own version. There is nothing to clone and no package index to find it in.
+
+`einherjar install` registers the server's MCP face in that harness and removes the skills the old
+markdown installer left behind. `einherjar login` is one browser step per machine: the request asks
+for consent so the issuer grants offline access, and the client renews its own token afterwards.
 
 The memory core and the coding overlay are separate installs; a fleet agent awakens through both.
 
