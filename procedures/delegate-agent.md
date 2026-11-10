@@ -92,7 +92,7 @@ Do not block, and do not sleep waiting for it. Continue your own work; the deleg
 einherjar result <SessionRef>
 ```
 
-That prints the captured output. The client creates that file when it spawns the turn, so a background ref answers with whatever has arrived — empty while the turn is still running, more on a later read. It never says "still running". `no recorded output for <ref>` means this machine holds no file for that ref at all: a mistyped ref, a turn spawned on another machine, or one that was never started detached — not proof that a background turn is merely unfinished.
+That prints the last turn's envelope — status, byte count, timings, the log's path — and its reply. The envelope and the log are written as the turn runs, so a background ref answers with whatever has arrived; read it again later for the finished turn, and it never says "still running". `einherjar result <ref> --full` prints the log instead: every reply that session has produced. `no recorded output for <ref>` means this machine holds no file for that ref at all: a mistyped ref, a turn spawned on another machine, or one that was never started detached — not proof that a background turn is merely unfinished.
 
 `einherjar sessions [--status active|completed|failed] [--project <name>]` reports the rows this machine recorded: a row reads `active` while the detached turn runs and is closed `completed` or `failed` when it ends, with the harness's error attached to a failure. When tracking is buffered — an outage, or a `401` — the row can be missing or stale, so it is a useful signal rather than proof. The list prints ref, platform, status, theme and machine label, in that order.
 
@@ -105,7 +105,7 @@ A delegation ends itself too: when the detached turn returns, the row is closed 
 ## When It Goes Wrong
 
 - **`401` or "authentication required"** — the token expired. The detached turn still runs: sign-in covers tracking, not execution. Read `result` (and the row, if the registry has one) before retrying, then run `einherjar login` to restore tracking and replay the buffered row. Delegate again only if the turn itself failed — repeating a completed delegation duplicates the work.
-- **The turn fails immediately** — `result` still prints whatever was captured, and the row is `failed` with the harness's stderr attached. `einherjar sessions --status failed` finds it. A missing harness on `PATH` and a model the harness refuses both look like this.
+- **The turn fails immediately** — `result` still prints the envelope and whatever was captured, the envelope's `status:` reads `failed` with the harness's error in `error:`, and the row is `failed` with the same error attached. `einherjar sessions --status failed` finds it. A missing harness on `PATH` and a model the harness refuses both look like this.
 - **The row never appears** — a registry that cannot be reached is buffered rather than dropped; the buffered row flushes on the next authenticated call, so `sessions` may show it later than the delegation itself.
 
 ---

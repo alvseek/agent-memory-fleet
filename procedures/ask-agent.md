@@ -74,11 +74,11 @@ Run the fleet client (blocking):
 einherjar ask "[Name|SessionRef]" --prompt "[structured prompt]" --theme "[theme]" [--model <value>]
 ```
 
-The client writes the session row first, then spawns the turn, so a failed spawn still leaves a row saying so. The command's first stdout line is the session ref; the reply follows it. Pass `--theme` with something short and stable: it is what makes the row findable later.
+The client writes the session row first, then spawns the turn, so a failed spawn still leaves a row saying so. The command's first stdout line is the session ref, then the turn's envelope — platform, status, byte count, timings, and where the log lives — and the reply after it. Pass `--theme` with something short and stable: it is what makes the row findable later; on OpenCode it also becomes the session's title.
 
 ### Step 4: Read the Reply
 
-Use the target agent's response to continue your work, and keep the ref from the first line (a UUID on Claude Code, `ses_...` on OpenCode). Resuming that ref with `/ask-agent [SessionRef]` sends a new prompt to the same session and records a new row; earlier rows are not overwritten.
+Use the target agent's response to continue your work, and keep the ref from the first line (a UUID on Claude Code, `ses_...` on OpenCode). Resuming that ref with `/ask-agent [SessionRef]` sends a new prompt to the same session and records a new row; earlier rows are not overwritten. Every turn also appends its reply to that ref's log, so `einherjar result <ref>` reprints the last turn later, and `einherjar result <ref> --full` reprints every reply the session has produced.
 
 ## Ending the Session
 

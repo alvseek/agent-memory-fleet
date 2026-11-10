@@ -102,20 +102,21 @@ def test_spawn_sends_a_long_task_to_a_task_file() -> None:
 
 
 def test_spawn_reads_result_as_a_file_not_a_running_flag() -> None:
-    """`result` prints a file created at spawn time; it cannot prove a turn is running."""
+    """`result` prints the last turn's envelope and the log; it cannot prove a turn is running."""
     text = _text("spawn")
-    assert "creates that ref's output file when it spawns the turn" in text
-    assert "an empty file is normal" in text
-    assert "not evidence that a background turn is still running" in text
-    # A foreground turn never writes one, which is why the ref is the only record of it.
-    assert "a foreground turn writes no" in text
+    assert "einherjar result <SessionRef> --full" in text
+    assert "writes two files as it runs" in text
+    assert "not evidence that a" in text
+    assert "still running" in text
+    # A foreground turn appends the same log, so its ref stays readable afterwards.
+    assert "appends the same log" in text
     assert "never as proof" in text
 
 
 def test_delegate_reads_result_as_a_file_and_needs_no_sign_in() -> None:
     text = _text("delegate-agent")
-    assert "creates that file when it spawns the turn" in text
-    assert "empty while the turn is still running" in text
+    assert "envelope and the log are written as the turn runs" in text
+    assert "result <ref> --full" in text
     assert "not proof that a background turn is merely unfinished" in text
     assert "needs no sign-in" in text
 

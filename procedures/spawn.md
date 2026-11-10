@@ -102,9 +102,11 @@ Background, when the work can run alongside your own:
 einherjar spawn --background --prompt "[structured prompt]" --theme "[theme]" [--model <value>]
 ```
 
-The foreground form prints the session ref first and the reply after it. The background form prints
-the ref and returns immediately, with the turn's output captured in the client's own state
-directory. `--theme` is what makes the row findable later, so pass something short and stable.
+Both forms print the session ref first. The foreground form then prints the turn's envelope — its
+platform, status, byte count, timings and where the log lives — and the reply after it. The background
+form prints the ref alone and returns immediately, while the envelope and the log are written as the
+turn runs. `--theme` is what makes the row findable later, so pass something short and stable; on
+OpenCode it also becomes the session's title.
 
 Naming no model is the normal case. On OpenCode the turn runs on the fleet's model, DeepSeek V4.1
 Flash (`opencode-go/deepseek-v4.1-flash`), because a spawned session inherits none; on Claude Code
@@ -118,23 +120,25 @@ you got: a `ses_...` value is OpenCode, a UUID is Claude Code.
 
 ### Step 4: Read the Result
 
-In the foreground the reply follows the ref on stdout; keep the ref — a foreground turn writes no
-output file, so `result` cannot fetch it later.
-
-In the background:
+Keep the ref — it is how you come back, in either mode. Every turn appends its reply to that ref's
+log, and `result` reads it:
 
 ```bash
-einherjar result <SessionRef>
+einherjar result <SessionRef>          # the last turn: its envelope, then the reply
+einherjar result <SessionRef> --full   # the log: every reply this session has produced
 ```
 
-The client creates that ref's output file when it spawns the turn and appends the turn's stdout to
-it, so `result` prints whatever has arrived: an empty file is normal while the turn is still
-running, and reading it again later shows more. It never says "still running"; it prints the file it
-has.
+A background turn writes two files as it runs — the envelope (`<ref>.result.md`) and the log
+(`<ref>.out`) — so its answer is read here rather than from the command that started it. The
+envelope's `status:` is where a failed turn says so: the ref is printed before the turn starts, so
+the exit code cannot report how it ended, and a failure's harness error rides in `error:`.
 
-`no recorded output for <ref>` is a different answer: this machine holds no output file for that ref
-at all. The ref is wrong, the turn was spawned on another machine, or it was a foreground spawn whose
-reply was only ever on stdout. It is not evidence that a background turn is still running.
+A foreground turn prints that same envelope and reply on stdout and appends the same log, but writes
+no envelope file, so `result` falls back to the log for it.
+
+`no recorded output for <ref>` is a different answer: this machine holds no file for that ref at all.
+The ref is wrong, the turn ran on another machine, or it produced no reply. It is not evidence that a
+background turn is still running.
 
 Whether the turn is still running is the registry's answer when it has one: `einherjar sessions`
 shows the row `active` until the turn ends. If tracking is buffered — an outage, or a `401` — the row
@@ -179,9 +183,9 @@ have.
 - **The prompt looks truncated** — a long multiline value reached the session incomplete. Start it
   again from a task file with a short instruction that points at it, rather than retrying the same
   multiline form.
-- **`no recorded output`** — this machine has no output file for that ref: a typo, another machine, or
-  a foreground spawn that never wrote one. Check the ref and `einherjar sessions` rather than reading
-  it as "still running".
+- **`no recorded output`** — this machine has no file for that ref: a typo, another machine, or a turn
+  that produced no reply. Check the ref and `einherjar sessions` rather than reading it as "still
+  running".
 - **A target was passed by mistake** — `einherjar spawn` takes none, so the extra argument is
   refused. Use `/ask-agent <Name>` for an awakened consult.
 
