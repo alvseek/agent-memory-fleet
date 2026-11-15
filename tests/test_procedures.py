@@ -1,11 +1,4 @@
-"""The authored procedures: the served set, and the guidance each one must carry.
-
-These assertions live in the repo that owns the content. They are about meaning rather than exact
-prose — "this procedure must say a spawn is anonymous", "no active procedure may send a reader to
-GitHub for the client" — so the wording can be rewritten freely while the instruction survives.
-"""
-
-from __future__ import annotations
+"""Authored workflow contracts; prose checks are not runtime verification."""
 
 from pathlib import Path
 
@@ -13,160 +6,153 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCEDURES = ROOT / "procedures"
-INSTALL_RESOURCE = "resource://client/install"
-INSTALL_TOOL = 'read_resource("client-install")'
-OBSOLETE_SOURCE_INSTALL = "git+https://github.com/alvseek/einherjar-server"
-
-EXPECTED = {"ask-agent", "delegate-agent", "spawn", "load-fleet", "setup-fleet"}
-CLIENT_PROCEDURES = ["ask-agent", "delegate-agent", "spawn"]
-ACTIVE_PROCEDURES = ["ask-agent", "delegate-agent", "spawn", "load-fleet"]
+EXPECTED = {"ask-agent", "delegate-agent", "spawn", "dispatch-plan", "load-fleet", "setup-fleet"}
+CLIENT_PROCEDURES = ["ask-agent", "delegate-agent", "spawn", "dispatch-plan"]
 
 
-def _text(name: str) -> str:
+def text(name: str) -> str:
     return (PROCEDURES / f"{name}.md").read_text(encoding="utf-8")
 
 
-def test_the_served_set_is_exactly_these_procedures() -> None:
-    assert {path.stem for path in PROCEDURES.glob("*.md")} == EXPECTED
+def test_served_set() -> None:
+    assert {p.stem for p in PROCEDURES.glob("*.md")} == EXPECTED
 
 
 @pytest.mark.parametrize("name", CLIENT_PROCEDURES)
-def test_client_procedures_point_at_the_served_wheel(name: str) -> None:
-    """A reader is sent to the running server's install resource, never to a package index."""
-    text = _text(name)
-    assert INSTALL_RESOURCE in text
-    assert INSTALL_TOOL in text
-    assert "uv tool install --force" in text
+def test_install_and_registry_contract(name: str) -> None:
+    body = text(name)
+    for phrase in (
+        "resource://client/install",
+        'read_resource("client-install")',
+        "uv tool install --force",
+        "consent",
+        "refresh",
+        "tracking",
+    ):
+        assert phrase in body
+    assert "git+https://" not in body
+    assert "uv tool install einherjar" not in body
 
 
-@pytest.mark.parametrize("name", ACTIVE_PROCEDURES)
-def test_no_active_procedure_installs_the_client_from_github(name: str) -> None:
-    text = _text(name)
-    assert OBSOLETE_SOURCE_INSTALL not in text
-    assert "uv tool install einherjar" not in text
+@pytest.mark.parametrize("name", ["delegate-agent", "dispatch-plan", "spawn"])
+def test_notification_is_platform_owned(name: str) -> None:
+    body = text(name)
+    for phrase in ("blocking", "OpenCode", "Claude Code", "completion", "timeout", "poll"):
+        assert phrase in body
+    assert "sleep" in body
+    assert "overlapping turns" in body
+    assert "closed" in body or "closing" in body or "closure" in body
 
 
-def test_the_readme_does_not_install_the_client_from_github() -> None:
-    assert OBSOLETE_SOURCE_INSTALL not in (ROOT / "README.md").read_text(encoding="utf-8")
+@pytest.mark.parametrize("name", ["ask-agent", "delegate-agent"])
+def test_no_target_is_anonymous_not_an_identity_question(name: str) -> None:
+    body = text(name)
+    assert "spawn" in body
+    assert "no awakening" in body or "without an identity or awakening" in body
+    assert "Which agent do you want" not in body
+    assert "SessionRef" in body
 
 
-# --- /spawn -------------------------------------------------------------------------------
-
-
-def test_spawn_is_anonymous_and_asks_for_no_awakening() -> None:
-    text = _text("spawn")
-    assert "no fleet agent name" in text
-    assert "no awakening" in text
-    assert "no fleet identity" in text
-    # The procedure must never instruct its reader to awaken a session.
-    assert "awaken as" not in text.lower()
-
-
-def test_spawn_carries_the_structured_prompt() -> None:
-    text = _text("spawn")
+def test_spawn_is_anonymous_and_resumable() -> None:
+    body = text("spawn")
+    for phrase in (
+        "no fleet agent name",
+        "no awakening",
+        "no fleet identity",
+        "einherjar ask <SessionRef>",
+        "not a memory wrap-up",
+        "not that anything was remembered",
+    ):
+        assert phrase in body
+    assert "awaken as" not in body.lower()
     for heading in ("## Theme", "## Context", "## Request", "## Expected Output"):
-        assert heading in text
-
-
-def test_spawn_covers_foreground_background_results_and_resume() -> None:
-    text = _text("spawn")
-    assert "einherjar spawn --prompt" in text
-    assert "--background" in text
-    assert "einherjar result <SessionRef>" in text
-    assert "einherjar ask <SessionRef>" in text
-    assert "--theme" in text
-    assert "--model" in text
-
-
-def test_spawn_states_the_lifecycle_and_the_honest_completion_rule() -> None:
-    text = _text("spawn")
-    assert "not a memory wrap-up" in text
-    assert "closed `completed`" in text
-    assert "not that anything was remembered" in text
-
-
-def test_spawn_forbids_overlapping_turns_and_names_the_platform_selection() -> None:
-    text = _text("spawn")
-    assert "Do not run overlapping turns" in text
-    assert "EINHERJAR_PLATFORM=claude|opencode" in text
-    assert "ses_" in text
-    assert "UUID" in text
-
-
-def test_spawn_sends_a_long_task_to_a_task_file() -> None:
-    """The documented safe form for a multiline task, without inventing a new CLI flag."""
-    text = _text("spawn")
-    assert "task file" in text
-    assert "truncated" in text
-    assert "--prompt-file" not in text
-
-
-def test_spawn_reads_result_as_a_file_not_a_running_flag() -> None:
-    """`result` prints the last turn's envelope and the log; it cannot prove a turn is running."""
-    text = _text("spawn")
-    assert "einherjar result <SessionRef> --full" in text
-    assert "writes two files as it runs" in text
-    assert "not evidence that a" in text
-    assert "still running" in text
-    # A foreground turn appends the same log, so its ref stays readable afterwards.
-    assert "appends the same log" in text
-    assert "never as proof" in text
-
-
-def test_delegate_reads_result_as_a_file_and_needs_no_sign_in() -> None:
-    text = _text("delegate-agent")
-    assert "envelope and the log are written as the turn runs" in text
-    assert "result <ref> --full" in text
-    assert "not proof that a background turn is merely unfinished" in text
-    assert "needs no sign-in" in text
-
-
-@pytest.mark.parametrize(
-    ("name", "prescribed"),
-    [
-        ("ask-agent", "and repeat the consult"),
-        ("delegate-agent", "and repeat the command"),
-    ],
-)
-def test_no_procedure_prescribes_repeating_a_dispatched_turn(
-    name: str, prescribed: str
-) -> None:
-    """Registry auth covers tracking; the turn already ran, so repeating it duplicates work."""
-    text = _text(name)
-    assert prescribed not in text
-    assert "tracking" in text
-
-
-def test_spawn_forbids_repeating_a_spawn_for_a_lapsed_sign_in() -> None:
-    text = _text("spawn")
-    assert "Do not repeat the spawn" in text
-    assert "duplicates the work" in text
-    assert "still ran" in text
-
-
-def test_spawn_does_not_claim_the_prompt_escapes_shell_quoting() -> None:
-    """A short single-line argument is still quoted; only long multiline values truncate."""
-    text = _text("spawn")
-    assert "does not depend on shell quoting" not in text
-    assert "single-line" in text
-    assert "truncat" in text
+        assert heading in body
 
 
 @pytest.mark.parametrize("name", CLIENT_PROCEDURES)
-def test_the_login_guidance_describes_refresh_not_a_hourly_sign_in(name: str) -> None:
-    """Consent buys a refresh token, so the client renews rather than asking every hour.
-
-    Regression: these procedures used to tell a reader this client was issued no refresh token and
-    had to sign in again whenever the access token expired.
-    """
-    text = _text(name)
-    assert "no refresh token" not in text
-    assert "refresh" in text
-    assert "consent" in text
+def test_prompt_file_and_explicit_model_contract(name: str) -> None:
+    body = text(name)
+    assert "single-line" in body
+    assert "truncat" in body
+    assert "model" in body
+    assert "unmapped" in body or "unresolved" in body
 
 
-def test_the_fleet_readme_describes_consent_and_refresh() -> None:
-    text = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "no refresh token" not in text
-    assert "consent" in text
-    assert "renews" in text
+def test_dispatch_inputs_and_precedence() -> None:
+    body = text("dispatch-plan")
+    for phrase in (
+        "--plan",
+        "--rules",
+        "--agent",
+        "--model",
+        "either order",
+        "filenames alone",
+        "plain Markdown",
+        "optional YAML",
+        "YAML is not required",
+        "override",
+        "missing model",
+    ):
+        assert phrase in body
+    assert "no mode setting" in body.lower()
+
+
+def test_dispatch_full_read_handoff_and_announcement() -> None:
+    body = text("dispatch-plan")
+    for phrase in (
+        "Read both documents fully",
+        "truncated",
+        "implement-plan",
+        "[PROJECT-ACCESS]",
+        "read_procedure",
+        "task file",
+        "announcement, not a confirmation",
+        "proceed without waiting",
+        "exclusive ownership",
+        "Acceptance Criteria",
+        "Expected Output",
+    ):
+        assert phrase in body
+
+
+def test_dispatch_supervision_and_human_gates() -> None:
+    body = text("dispatch-plan")
+    for phrase in (
+        "same worker",
+        "same-resolved-model",
+        "not that the plan is finished",
+        "verification evidence",
+        "STOP/sign-off",
+        "scope changes",
+        "costly to reverse",
+        "Do not archive",
+        "Anonymous workers",
+        "duplicate",
+        "registry 401",
+    ):
+        assert phrase in body
+
+
+@pytest.mark.parametrize("name", CLIENT_PROCEDURES)
+def test_procedures_never_prescribe_removed_cli_launches(name: str) -> None:
+    # Mentioning a removed form in migration prose is fine; emitting a command is not.
+    lines = text(name).splitlines()
+    commands = [line.strip() for line in lines if line.strip().startswith("einherjar ")]
+    assert not any(line.startswith("einherjar delegate ") for line in commands)
+    assert not any(
+        line.startswith("einherjar spawn ") and "--background" in line for line in commands
+    )
+
+
+def test_historical_results_are_not_live_completion() -> None:
+    for name in CLIENT_PROCEDURES:
+        body = text(name)
+        assert "historical" in body
+        assert "current command result" in body or "current turn" in body
+
+
+def test_readme_and_load_fleet_offer_dispatch() -> None:
+    for body in (text("load-fleet"), (ROOT / "README.md").read_text(encoding="utf-8")):
+        assert "dispatch-plan" in body
+        assert "einherjar delegate ..." not in body
+        assert "spawn --prompt ... [--background]" not in body

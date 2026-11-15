@@ -1,8 +1,8 @@
 # Ask Agent
 
-Send a blocking consultation request to another specialized agent. The fleet client records the consult, awakens the target through the served coding overlay, sends the structured prompt, and returns the reply. This procedure is designed for agent-to-agent communication — the calling agent constructs the prompt and sends it without user confirmation.
+Send a blocking consultation request to a named agent, an existing session, or an anonymous worker. The fleet client records the consult and returns its reply. Only a new named target receives the served coding awakening. The calling agent constructs the prompt and sends it without redundant user confirmation.
 
-A consult and a delegation are the same turn, and the difference is only whether you wait: this one holds until the answer arrives, `/delegate-agent` returns a ref immediately. Use this form when the next step depends on the answer.
+A consult and a delegation use the same blocking client turn. This procedure waits directly; `/delegate-agent` runs it through a completion-aware platform background task. Use this form when the next step depends on the answer.
 
 ## Before you start
 
@@ -23,9 +23,9 @@ Two things must be true on this machine, and neither is checked by the consult i
 `$ARGUMENTS`
 
 - `/ask-agent [Name|SessionRef]` → Construct structured prompt, then send to the target agent
-- `/ask-agent` → Will ask which agent to consult
+- `/ask-agent` → Plain `/spawn` without identity; ask for the task only if it is missing
 
-If no arguments provided, ask: "Which agent do you want to consult? Provide a Name (to awaken) or a session ref (to resume)."
+An omitted target is not an error and does not prompt for an identity. Follow `spawn` with the task and requested model; do not treat a task description as an agent name.
 
 ---
 
@@ -34,6 +34,7 @@ If no arguments provided, ask: "Which agent do you want to consult? Provide a Na
 ### Step 1: Resolve Target
 
 Parse the argument:
+- If no identity or session ref was supplied, use anonymous spawn with no awakening.
 - If it is a session ref, this is a **resume**. A UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) is a Claude Code session; a `ses_...` value is an OpenCode session. The ref's own shape decides which platform the turn goes to.
 - If it's a name (e.g., "Backend Django", "Software Architect"), this is a **new awakening**. The client starts a new session on the platform detected from your environment: OpenCode sets `OPENCODE=1`; Claude Code sets `CLAUDECODE=1`. `EINHERJAR_PLATFORM=claude|opencode` overrides the detection.
 
@@ -44,7 +45,7 @@ Also check if `$ARGUMENTS` contains `--model <value>`. If present, extract `MODE
 - `"3f8a2b1c-... --model sonnet"` → TARGET=`3f8a2b1c-...`, MODEL=`sonnet`
 - `"Backend Django"` → TARGET=`Backend Django`, MODEL=`""`
 
-Naming no model is the normal case: on OpenCode the client runs the turn on the fleet's model, DeepSeek V4.1 Flash (`opencode-go/deepseek-v4.1-flash`), because a spawned turn inherits no session and therefore no model. On Claude Code the flag is simply left off, so the platform default applies. A bare alias on OpenCode is looked up in `EINHERJAR_MODEL_<ALIAS>`, and an unmapped one sends no model at all — pass `provider/model` if you need something specific.
+Without an explicit model, ordinary calls retain the existing platform defaults: the fleet's OpenCode model or Claude Code's own default. An explicit OpenCode alias must map through `EINHERJAR_MODEL_<ALIAS>` to a qualified `provider/model`; unmapped or invalid mappings fail visibly, never silently default. Carry a requested model on each resume. `/dispatch-plan` requires an explicit resolved model.
 
 ### Step 2: Construct Structured Prompt
 
@@ -66,6 +67,8 @@ Fill this template based on the current task context. All fields are required:
 
 Do NOT send vague or open-ended prompts. Be specific about what you need and what the response should look like.
 
+For long or multiline tasks, write the structured prompt to a task file and pass a short single-line prompt naming its absolute path. Windows command shims may truncate multiline arguments even when quoted. Verify that the worker read the whole file.
+
 ### Step 3: Execute
 
 Run the fleet client (blocking):
@@ -74,11 +77,15 @@ Run the fleet client (blocking):
 einherjar ask "[Name|SessionRef]" --prompt "[structured prompt]" --theme "[theme]" [--model <value>]
 ```
 
-The client writes the session row first, then spawns the turn, so a failed spawn still leaves a row saying so. The command's first stdout line is the session ref, then the turn's envelope — platform, status, byte count, timings, and where the log lives — and the reply after it. Pass `--theme` with something short and stable: it is what makes the row findable later; on OpenCode it also becomes the session's title.
+With no target, run `einherjar spawn --prompt "[structured prompt]" --theme "[theme]" [--model <value>]` instead. Set the shell tool's working directory to the project. Use a suitable supported timeout for blocking work; the default is not a fixed cap. For parallel execution follow `delegate-agent` and keep the client blocking inside the platform's notification-capable task tool.
+
+The client records the turn then runs it; when execution returns, success prints the session ref, envelope (platform, status, byte count, timings and log path) and reply. The ref is not streamed before the blocking runner returns. Failure is reported as an error; a registry outage buffers tracking without stopping work. Use a short stable theme; on OpenCode it also titles a new session.
 
 ### Step 4: Read the Reply
 
 Use the target agent's response to continue your work, and keep the ref from the first line (a UUID on Claude Code, `ses_...` on OpenCode). Resuming that ref with `/ask-agent [SessionRef]` sends a new prompt to the same session and records a new row; earlier rows are not overwritten. Every turn also appends its reply to that ref's log, so `einherjar result <ref>` reprints the last turn later, and `einherjar result <ref> --full` reprints every reply the session has produced.
+
+Use the current command result to judge this turn. `result` prefers a historical envelope if present and otherwise reads the reply log; an old envelope can predate a later blocking resume. Do not run overlapping turns against one ref. Timeout or interruption is not proof the worker stopped: inspect that task/session before retrying. Process success alone does not establish task completion.
 
 ## Ending the Session
 
@@ -88,6 +95,8 @@ Two commands cover everything after that:
 
 - **`einherjar sessions [--status active|completed|failed] [--project <name>]`** lists your recorded consults, one line each as ref, platform, status, theme, machine label. An empty list is a normal answer and prints `no recorded consults`.
 - **`einherjar wrap-up <ref>`** concludes a session on purpose. It resumes that teammate with a wrap-up instruction, records that turn as its own row themed `wrap-up`, and closes it. Reach for it when the teammate's own memory should be saved, not merely to tidy the list — the earlier row already reflects what happened.
+
+Do not request identity memory wrap-up for an anonymous spawned session. Keep any explicit human approval or STOP gate in the assigned task.
 
 ## When It Goes Wrong
 

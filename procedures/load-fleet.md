@@ -19,7 +19,7 @@ A handoff to another layer resolves through that layer's access declaration, whi
 
 - `[CORE-ACCESS]` / `[CORE-MCP-URL]`: how the memory core (`munnin`) is reached. A consult uses it to awaken a teammate.
 - `[PROJECT-ACCESS]` / `[PROJECT-MCP-URL]`: how the coding overlay (`hermod`) is reached. A consult uses it to give a spawned teammate the coding awakening.
-- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached. It is served: the five procedures are prompts and a `read_procedure` tool on that server, and nothing is installed locally.
+- `[FLEET-ACCESS]` / `[FLEET-MCP-URL]`: how this fleet (`einherjar`) is reached. Its procedures are served as prompts and through `read_procedure`; nothing is installed locally.
 
 ## Procedure
 
@@ -43,8 +43,9 @@ Report the roster and the fleet commands:
 - **Roster**: each teammate on the project's fleet (domain, specialty, when to consult, and the model when one is named).
 - **Commands**:
   - `einherjar ask [Name|SessionRef] --prompt ... --theme ...` - blocking consultation with a teammate
-  - `einherjar delegate ...` then `einherjar result <ref>` - background handoff of a task
-  - `einherjar spawn --prompt ... [--background]` - a fresh anonymous session with no fleet awakening
+  - `/delegate-agent [Name|SessionRef]` - a blocking ask/spawn inside the platform's completion-aware background task, with blocking fallback
+  - `einherjar spawn --prompt ...` - a fresh anonymous blocking session with no fleet awakening
+  - `/dispatch-plan plan.md rules.md` - supervise an approved plan on the selected model until completion or a human gate
   - `einherjar sessions [--status active|completed|failed]` - the consults this machine has recorded, and how each ended
   - `einherjar wrap-up <ref>` - conclude a teammate's session on purpose, saving its memory
   - `/setup-fleet` - the served prompt that defines the team (once per project)
@@ -52,5 +53,7 @@ Report the roster and the fleet commands:
 Running one of those needs two things on the machine: `einherjar` on `PATH`, installed from the wheel this server serves as `resource://client/install` (or `read_resource("client-install")`) reports, and a sign-in from `einherjar login`.
 
 The procedures are served by Einherjar: `/ask-agent` is a prompt on that server, and an agent can also fetch it with `read_procedure("ask-agent")`. This procedure reads the roster only; active sessions are the registry's business and are not part of it.
+
+Omitting a target in ask-agent or delegate-agent selects anonymous spawn, not an identity question. The CLI has no detached execution mode: use the platform task facility for notification-safe parallel work. Existing old clients on other machines retain their old commands until explicitly upgraded.
 
 ---

@@ -1,111 +1,80 @@
 # Delegate Agent
 
-Send a background delegation request to another specialized agent. The fleet client records the consult, awakens the target through the served coding overlay, starts the turn detached, and returns immediately. The caller continues its own work while the target works. This procedure is designed for agent-to-agent communication — the calling agent constructs the prompt and sends it without user confirmation.
-
-A delegation and a consult are the same turn, and the difference is only whether you wait: this one prints a ref and returns, `/ask-agent` holds until the answer arrives. Delegate when the work can run alongside your own, and consult when your next step depends on the answer.
-
-## Before you start
-
-Two things must be true on this machine, and neither is checked by the delegation itself:
-
-- **The client is installed.** Read the install resource this server serves —
-  `resource://client/install` as an MCP resource, or the `read_resource("client-install")` tool —
-  and follow it: it reports the current wheel URL, its hash and the exact
-  `uv tool install --force` command for this deployment. Install from that URL, never from a
-  repository. If `einherjar` is missing from `PATH`, report the instruction you read instead of
-  proceeding.
-- **This machine is signed in.** `einherjar login` opens the browser at `auth.lok.quest`, returns to `http://127.0.0.1:8123/callback`, and asks for consent explicitly so the issuer grants `offline_access`; the client keeps the refresh token it receives and renews the access token itself, and signing in again is only needed when that stored credential expires or is revoked. A delegation started just before the access token expires still runs — the turn is a local process once it is spawned, and the refresh happens on its own — and `result` reads its captured output from disk, so reading it later needs no sign-in.
-
-`einherjar install --harness claude|opencode` is the one-time setup per harness: it registers the MCP server that serves this procedure and removes the skills the old installer left. No copy of these procedures is installed anywhere.
+Hand a task to a named or anonymous worker while retaining completion delivery to the invoking agent. The client command stays blocking; the invoking platform's background task reports when it finishes. No independent detached process or polling loop is used.
 
 ## Arguments
 
 `$ARGUMENTS`
 
-- `/delegate-agent [Name|SessionRef]` → Construct structured prompt, then delegate to the target agent
-- `/delegate-agent` → Will ask which agent to delegate to
+- `/delegate-agent [Name|SessionRef] [--model <value>]` sends a structured task.
+- No target means plain `/spawn`, without an identity or awakening. Ask for a task only if the task itself is missing; do not ask which identity to use.
+- A UUID or `ses_...` ref resumes its owning platform's existing conversation without another awakening. A named domain creates a new awakened session.
 
-If no arguments provided, ask: "Which agent do you want to delegate to? Provide a Name (to awaken) or a session ref (to resume)."
+## Before starting
 
----
+Read `resource://client/install` or `read_resource("client-install")` for the running server's current wheel, hash and exact `uv tool install --force` command. Install or upgrade only with authorization; if `einherjar` is absent from PATH, report the instruction and blocker.
 
-## Procedure
+`einherjar install --harness claude|opencode` registers the server, not a local copy of these procedures. `einherjar login` asks for consent to grant offline access; the stored refresh token renews access tokens until it expires or is revoked. A registry 401 affects tracking, not the worker's execution, and does not justify dispatching the task twice. Restoring sign-in replays buffered tracking; reading a local result needs no sign-in.
 
-### Step 1: Resolve Target
+## 1. Resolve target and task
 
-Parse the argument:
-- If it is a session ref, this is a **resume**. A UUID is a Claude Code session; a `ses_...` value is an OpenCode session, and the ref's shape decides the platform.
-- If it's a name (e.g., "Backend Django", "Frontend Nextjs"), this is a **new awakening**. The client starts a new session on the platform detected from your environment. `EINHERJAR_PLATFORM=claude|opencode` overrides that detection.
+Follow `ask-agent` for target/model resolution and the named-or-anonymous command choice. Extract `--model` before resolving a name/ref. Use a qualified OpenCode `provider/model` or a configured alias; an unresolved explicit model fails rather than silently using a default.
 
-A name is lower-cased and hyphenated into a domain — `Backend Django` becomes `backend-django` — and that domain is what the teammate is awakened as. The client does not check a roster: a wrong domain fails at awakening. When you do not know the names, `/load-fleet` reads the roster first.
+Use a structured task file containing:
 
-Also check if `$ARGUMENTS` contains `--model <value>`. If present, extract `MODEL=<value>` and strip it from the name/ref portion before resolving the target. Examples:
-- `"Backend Django --model opus"` → TARGET=`Backend Django`, MODEL=`opus`
-- `"3f8a2b1c-... --model haiku"` → TARGET=`3f8a2b1c-...`, MODEL=`haiku`
-- `"ses_eac06c991ffd..."` → TARGET=`ses_eac06c991ffd...`, MODEL=`""`
-
-Naming no model is the normal case: on OpenCode the client runs the delegated turn on the fleet's model, DeepSeek V4.1 Flash (`opencode-go/deepseek-v4.1-flash`), because a spawned turn inherits no session and therefore no model. On Claude Code the flag is left off and the platform default applies. A bare alias on OpenCode is looked up in `EINHERJAR_MODEL_<ALIAS>`, and an unmapped one sends no model at all.
-
-### Step 2: Construct Structured Prompt
-
-Fill this template based on the current task context. All fields are required:
-
-```
+```markdown
 ## Theme
-[Short label for the fleet registry — e.g., "user auth middleware", "inventory tags UI"]
-
+<short stable label>
 ## Context
-[What you're working on and why this task needs to be delegated]
-
+<working directory, purpose and required background>
 ## Task
-[Clear description of what the target agent should accomplish]
-
+<specific work>
 ## Acceptance Criteria
-[How do we know the task is done? What conditions must be met?]
-
+<what completion must prove>
 ## Expected Deliverables
-[What files, code, documents, or outputs should be produced?]
-
+<files/results and concise final reply>
 ## Constraints
-[Any limitations, patterns to follow, things to avoid, or dependencies to be aware of]
+<scope, permissions, human gates and ownership>
 ```
 
-Do NOT send vague or open-ended prompts. Be specific about the task, what "done" looks like, and what constraints apply.
+For long or multiline tasks, pass a short single-line prompt naming the full task file; Windows shims can truncate a multiline argument. The new worker cannot rely on the invoking conversation's unsent instructions.
 
-### Step 3: Execute
+## 2. Execute through the platform task facility
 
-Run the fleet client's background form:
+Choose a blocking command:
 
-```bash
-einherjar delegate "[Name|SessionRef]" --prompt "[structured prompt]" --theme "[theme]" [--model <value>]
+```sh
+einherjar ask "<Name|SessionRef>" --prompt "Read the complete task at <absolute task path> and follow it." --theme "<theme>" [--model <value>]
 ```
 
-It writes the session row, spawns the turn detached with its output captured in the client's own state directory, prints the session ref, and returns immediately. There is no harness-specific background flag: the detachment belongs to the client, so it behaves the same on Claude Code and OpenCode. `--theme` is what makes the row findable later, so pass something short and stable.
+With no target, use the anonymous command:
 
-### Step 4: Continue Working
-
-Do not block, and do not sleep waiting for it. Continue your own work; the delegated turn is a separate process with its own session.
-
-### Step 5: Collect the Result, Then End It
-
-```bash
-einherjar result <SessionRef>
+```sh
+einherjar spawn --prompt "Read the complete task at <absolute task path> and follow it." --theme "<theme>" [--model <value>]
 ```
 
-That prints the last turn's envelope — status, byte count, timings, the log's path — and its reply. The envelope and the log are written as the turn runs, so a background ref answers with whatever has arrived; read it again later for the finished turn, and it never says "still running". `einherjar result <ref> --full` prints the log instead: every reply that session has produced. `no recorded output for <ref>` means this machine holds no file for that ref at all: a mistyped ref, a turn spawned on another machine, or one that was never started detached — not proof that a background turn is merely unfinished.
+Run it in the project's working directory through the invoking platform's completion-aware background shell tool:
 
-`einherjar sessions [--status active|completed|failed] [--project <name>]` reports the rows this machine recorded: a row reads `active` while the detached turn runs and is closed `completed` or `failed` when it ends, with the harness's error attached to a failure. When tracking is buffered — an outage, or a `401` — the row can be missing or stale, so it is a useful signal rather than proof. The list prints ref, platform, status, theme and machine label, in that order.
+- OpenCode: `shell` with `background: true` notifies this session when the blocking command finishes.
+- Claude Code: use the available Bash/PowerShell `run_in_background` option only when it delivers completion to this conversation; respect its task lifetime/timeout rules.
+- Without a notification-capable facility, keep the command blocking with an appropriate supported timeout. Do not use client detachment, an independent process, a bare shell `&`, sleep, or polling.
 
-## Ending the Session
+The removed CLI forms `einherjar delegate` and `spawn --background` must not be used. Migration means running blocking `ask` or `spawn` inside the platform task, not moving the detached child into another wrapper.
 
-A delegation ends itself too: when the detached turn returns, the row is closed and the output is readable. Nothing is owed after that.
+Keep the platform task handle. Continue independent work while it runs, or end this turn so the completion event can resume you. Do not poll or abandon responsibility for collecting the result.
 
-`einherjar wrap-up <ref>` is the deliberate close. It resumes that teammate with a wrap-up instruction, records that turn as its own row themed `wrap-up`, and closes it. Use it when the teammate's own memory should be saved, not merely to tidy the list — the earlier row already reflects what happened.
+## 3. Receive and inspect completion
 
-## When It Goes Wrong
+On the completion notification, read the current command output: success returns the worker ref followed by its envelope and reply; failure returns an error. Keep the worker ref separately from the platform task handle. A successful turn is not proof the requested deliverable is finished: check its acceptance criteria and evidence.
 
-- **`401` or "authentication required"** — the token expired. The detached turn still runs: sign-in covers tracking, not execution. Read `result` (and the row, if the registry has one) before retrying, then run `einherjar login` to restore tracking and replay the buffered row. Delegate again only if the turn itself failed — repeating a completed delegation duplicates the work.
-- **The turn fails immediately** — `result` still prints the envelope and whatever was captured, the envelope's `status:` reads `failed` with the harness's error in `error:`, and the row is `failed` with the same error attached. `einherjar sessions --status failed` finds it. A missing harness on `PATH` and a model the harness refuses both look like this.
-- **The row never appears** — a registry that cannot be reached is buffered rather than dropped; the buffered row flushes on the next authenticated call, so `sessions` may show it later than the delegation itself.
+If output is retained in a file, read the necessary result from that file without ingesting a raw event stream. Local `einherjar result <ref>` and `result <ref> --full` read historical output, not current running state. A legacy `.result.md` may be older than the latest blocking resume; judge the current turn by its command result.
 
----
+To continue, use blocking `einherjar ask <SessionRef>` through the same platform task mechanism. Keep an explicit model on continuations. Do not run overlapping turns against the same ref.
+
+On timeout, interruption or missing completion, inspect the existing task/session before retrying. No result is not proof the worker stopped, and stale/missing registry tracking is not proof a turn failed. A registry 401 never warrants repeating completed work.
+
+## Ending the session
+
+The blocking turn closes its registry row `completed` or `failed`; a tracking outage buffers updates. That status describes the process, not saved memory or accepted task completion.
+
+`einherjar sessions` lists recorded turns. Only explicitly request `einherjar wrap-up <ref>` for a named agent whose own memory should be saved. Anonymous spawn has no presumed fleet memory and must not be wrapped up as an identity. Completion delivery depends on the invoking platform session remaining available; do not promise a notification survives its closure.
