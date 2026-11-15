@@ -10,6 +10,7 @@ Hand an approved implementation plan and custom rules to a worker on an explicit
 /dispatch-plan plan.md rules.md
 /dispatch-plan rules.md plan.md --model provider/model
 /dispatch-plan --plan plan.md --rules rules.md --model provider/model --agent software-architect
+/dispatch-plan --plan "<plan-path>" --rules "<rules-path>" --model provider/model --worktree "<new-path>" --branch "<new-branch>" [--base "<ref>"]
 ```
 
 These are procedure inputs interpreted by the invoking agent, not a new `einherjar` CLI command.
@@ -19,6 +20,7 @@ These are procedure inputs interpreted by the invoking agent, not a new `einherj
 - Rules are plain Markdown instructions. An optional YAML header works too; YAML is not required and no parser installation is needed. For example, “Use model provider/model. Use agent software-architect.” is sufficient.
 - A missing model requires clarification before launch. No named agent means anonymous spawn, not a request to choose an identity.
 - There is no mode setting. Parallelism uses the platform's completion-aware task facility, never client-owned detached execution.
+- `--worktree` and `--branch` together request a new worktree and new branch; `--base` optionally selects their starting ref, defaulting to the source repository's current `HEAD`. Reject a partial pair or `--base` without the pair. Without these options or a recorded workspace to resume, preserve the existing working directory and branch. These are procedure options, not flags to pass to the Einherjar CLI.
 
 ## Before starting
 
@@ -34,6 +36,16 @@ Use the platform's actual model vocabulary. On OpenCode pass a qualified `provid
 
 Aliases are uppercased with hyphens replaced by underscores; dots are preserved. Use a simple alias or a qualified model where possible. Dotted environment-variable names require the braced PowerShell form, such as `${env:EINHERJAR_MODEL_DEEPSEEK_V4.1_FLASH} = 'opencode-go/deepseek-v4.1-flash'`.
 
+### Prepare the worker's workspace
+
+The supervisor prepares a requested worktree before launching the worker. For a recorded workspace, use the resumption checks rather than creating it again. With neither a request nor a recorded workspace, skip worktree setup and retain the existing directory and branch. Resolve the original plan and rules to absolute paths from the invoking working directory first. Those originals remain authoritative: the worker updates only the original plan's execution log, never a checkout copy. Implementation-file references resolve from the worker's implementation workspace, not from the original plan's directory.
+
+- Inspect the source with `git rev-parse --show-toplevel`, `git status --short` and `git worktree list --porcelain`. Use that repository even if it is a submodule; do not silently move to its parent. Uncommitted changes are not carried into the new worktree. Leave them untouched: no automatic stash, commit or copy. If the approved implementation requires uncommitted source code, STOP and ask.
+- Resolve the destination to an absolute path from the invoking working directory and quote paths containing spaces. Validate the branch with `git check-ref-format --branch`. Refuse an existing destination, existing local branch or conflicting registered worktree; never overwrite, reset or force. Resolve the requested base or source `HEAD` using `git rev-parse --verify --end-of-options "<base>^{commit}"` and retain the exact starting commit. Do not fetch or substitute a default branch.
+- Create with `git -C "<source-root>" worktree add -b "<new-branch>" "<absolute-worktree-path>" "<resolved-base-commit>"`. Check success, then immediately record the source root, worktree path, branch, exact starting commit and original document paths in the execution context and existing plan log, before further setup.
+- Run `git -C "<absolute-worktree-path>" submodule update --init --recursive`. Initialize pinned commits, not newer remote tips. Verify the registered worktree, repository identity, actual branch and starting commit, and check recursive submodule status for incomplete initialization or mismatched pins before launching. Do not automatically copy secrets, `.env` files or dependency folders. Worktrees do not isolate databases or ports; use project-approved configuration and ask if required setup is missing.
+- On resumption, verify the recorded source repository, registered path, branch, original document paths and starting commit. Compare the source and target's absolute `git rev-parse --path-format=absolute --git-common-dir` results to establish repository identity, and check the actual branch with `git branch --show-current`. The worker's `HEAD` may have advanced; do not reset it to the starting commit or create a second worktree. A conflicting new assignment requires clarification. If setup fails, report actual artifacts and remaining setup, STOP without launching a worker, and never automatically remove the worktree or branch.
+
 ## 2. Prepare the handoff and announce it
 
 Write a durable task file in a suitable project/task location or approved temporary directory. Include all of these fields:
@@ -43,11 +55,15 @@ Write a durable task file in a suitable project/task location or approved tempor
 <short stable task label>
 
 ## Context
-<project working directory, approved scope, resolved model and identity or anonymous>
+<absolute implementation working directory, approved scope, resolved model and identity or anonymous;
+when using a worktree: source repository, worktree path, branch and exact starting commit>
 
 ## Task
 Read the full plan at <absolute plan path> and full rules at <absolute rules path>.
 Load and follow the coding layer's implement-plan procedure.
+Use the assigned implementation directory. If a worktree assignment is supplied,
+it is already prepared: verify it and do not create another worktree.
+Keep the original plan/rules authoritative and update only the original plan's execution log.
 Implement sequentially, verify each step and update the plan's execution log.
 
 ## Acceptance Criteria
@@ -66,9 +82,9 @@ updated plan/log paths and a concise final conclusion>
 
 Resolve coding-layer access explicitly in this handoff: under `[PROJECT-ACCESS] = mcp`, the worker fetches `read_procedure("implement-plan")` from Hermod and follows it; under markdown, load the installed implement-plan procedure. Do not replace that procedure with a paraphrase. Require full plan/rules reads before implementation, including recovery from observed truncation.
 
-Assign exclusive ownership of implementation paths to the worker. Do not edit the same paths concurrently as supervisor. The plan/log remains the implementation source of truth; the rules document constrains execution rather than becoming a second progress tracker.
+Assign exclusive ownership of implementation paths and the original plan log to the worker while its turn runs. Do not edit them concurrently as supervisor. The plan/log remains the implementation source of truth; the rules document constrains execution rather than becoming a second progress tracker. When using a worktree, implementation files belong there, not in the source checkout; only the agreed original plan log may change in the source checkout.
 
-Tell the user what will run: plan and rules paths, working directory, selected model, named identity or anonymous worker, and that you will supervise until completion or a human gate. This is an announcement, not a confirmation prompt. Then proceed without waiting for another approval.
+Tell the user what will run: original plan and rules paths, implementation working directory, worktree branch and exact base commit when requested, selected model, named identity or anonymous worker, and that you will supervise until completion or a human gate. This is an announcement, not a confirmation prompt. Then proceed without waiting for another approval.
 
 ## 3. Start a notification-safe worker turn
 
@@ -84,7 +100,7 @@ With no identity, use plain spawn, with no awakening instruction:
 einherjar spawn --model "<resolved-model>" --theme "<theme>" --prompt "Read the full task at <absolute task path> and follow it exactly."
 ```
 
-Use a short single-line prompt naming the task file; Windows command shims can truncate long multiline values even when quoted. Use the platform shell tool's working-directory parameter. When Windows subprocess output needs it, set `PYTHONUTF8=1` for that invocation.
+Use a short single-line prompt naming the task file; Windows command shims can truncate long multiline values even when quoted. Use the platform shell tool's working-directory parameter, set to the prepared implementation directory for the initial launch and every continuation. A shell-only `cd` does not move the agent session. When Windows subprocess output needs it, set `PYTHONUTF8=1` for that invocation.
 
 - OpenCode: its `shell` tool with `background: true` runs this blocking command and notifies the invoking session when it finishes.
 - Claude Code: use its available Bash/PowerShell background-task option (`run_in_background`) only when that tool delivers completion back to this conversation; respect its current lifecycle/time limits.
@@ -94,7 +110,7 @@ Retain the platform task handle. When the command finishes, its output includes 
 
 ## 4. Verify, then continue the same worker
 
-On completion notification, read the returned output and any output file needed to recover the result. Check the worker actually read the full plan, rules and implement-plan procedure. Inspect the plan/log, relevant changed files and reported verification evidence. Process success means a turn ended, not that the plan is finished.
+On completion notification, read the returned output and any output file needed to recover the result. Check the worker actually read the full plan, rules and implement-plan procedure and used the assigned workspace and branch. Inspect the original plan/log, changes in the implementation directory and reported verification evidence; when a separate worktree is used, check the source checkout for unintended implementation edits. Process success means a turn ended, not that the plan is finished.
 
 When routine in-scope work remains, send a specific correction or next task to the same worker:
 
@@ -102,7 +118,7 @@ When routine in-scope work remains, send a specific correction or next task to t
 einherjar ask "<worker-ref>" --model "<same-resolved-model>" --theme "<theme>" --prompt "Read the continuation task at <absolute task path> and follow it."
 ```
 
-Use the same notification-safe execution mechanism each time. Resume the ref, do not start a fresh identity session or awaken again. Do not run overlapping turns against one ref. Continue guiding without routine reconfirmation until completion or a real escalation.
+Use the same notification-safe execution mechanism and the same verified implementation directory and branch each time. Resume the ref, do not start a fresh identity session or awaken again. Do not run overlapping turns against one ref. Continue guiding without routine reconfirmation until completion or a real escalation.
 
 `einherjar result <ref>` reads a historical envelope when present, otherwise the accumulated reply log; `--full` reads the whole log. It is not a live running flag. Following a foreground resume, an older historical envelope may describe an earlier turn: use the current command result, not stale disk metadata, to judge this turn.
 
@@ -112,4 +128,4 @@ On timeout, interruption, cancellation or missing output, do not assume the work
 
 Handle routine implementation and in-scope review fixes as supervisor. Return to the user for blockers, scope changes, explicit human STOP/sign-off gates or a decision costly to reverse, such as durable data or an externally depended-on contract. Do not silently waive quality-review approval or archive sign-off. Present the exact issue, options and evidence, then wait.
 
-Declare the plan complete only against its actual requirements and verification. State what changed, what was tested, and what remains unverified or explicitly deferred. Do not archive without human sign-off. Anonymous workers have no presumed identity memory: do not send them `einherjar wrap-up`. Named agents may save their own memory only when that is explicitly requested; a completed turn alone does not mean memory was saved.
+Declare the plan complete only against its actual requirements and verification. State what changed, what was tested, and what remains unverified or explicitly deferred. Include the worktree path and branch in the result when used. Do not archive, merge, remove a worktree or delete its branch without human sign-off. Anonymous workers have no presumed identity memory: do not send them `einherjar wrap-up`. Named agents may save their own memory only when that is explicitly requested; a completed turn alone does not mean memory was saved.
