@@ -45,6 +45,8 @@ Set the shell tool's working directory to the project. The platform is detected 
 
 Ordinary omitted-model calls keep existing defaults (the fleet's OpenCode model, or Claude Code's default). An explicit OpenCode alias must resolve via `EINHERJAR_MODEL_<ALIAS>` to `provider/model`; an unmapped alias is refused, not silently dropped. Use a qualified model when specificity matters. `/dispatch-plan` requires an explicit resolved model.
 
+Alias keys use uppercase with hyphens changed to underscores; dots remain. Prefer a portable short alias such as `flash`. PowerShell needs braces around a dotted variable name: `${env:EINHERJAR_MODEL_DEEPSEEK_V4.1_FLASH} = 'opencode-go/deepseek-v4.1-flash'`. Passing the qualified model avoids alias setup entirely.
+
 The client waits for the runner. Success then prints the ref, envelope (platform, status, bytes, timings and output path) and reply, and appends the same log on disk. A failure returns a nonzero exit and error. Do not expect the worker ref to stream before the blocking runner finishes.
 
 For parallel work, follow `delegate-agent`: run this same blocking command in OpenCode's `shell(background: true)` or a notification-capable Claude Code background Bash/PowerShell task. The platform reports completion to the invoking session. Without that facility, stay blocking with a suitable supported timeout. Never use client detachment, shell `&`, sleep or polling to fake notification. The removed CLI `spawn --background` is not an available mode.

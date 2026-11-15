@@ -47,6 +47,8 @@ Also check if `$ARGUMENTS` contains `--model <value>`. If present, extract `MODE
 
 Without an explicit model, ordinary calls retain the existing platform defaults: the fleet's OpenCode model or Claude Code's own default. An explicit OpenCode alias must map through `EINHERJAR_MODEL_<ALIAS>` to a qualified `provider/model`; unmapped or invalid mappings fail visibly, never silently default. Carry a requested model on each resume. `/dispatch-plan` requires an explicit resolved model.
 
+The mapping key uppercases the alias and replaces hyphens with underscores, leaving dots unchanged. Prefer a simple alias like `flash` or a qualified model. For a dotted alias in PowerShell, use the braced variable form, for example `${env:EINHERJAR_MODEL_DEEPSEEK_V4.1_FLASH} = 'opencode-go/deepseek-v4.1-flash'`.
+
 ### Step 2: Construct Structured Prompt
 
 Fill this template based on the current task context. All fields are required:

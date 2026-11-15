@@ -156,3 +156,11 @@ def test_readme_and_load_fleet_offer_dispatch() -> None:
         assert "dispatch-plan" in body
         assert "einherjar delegate ..." not in body
         assert "spawn --prompt ... [--background]" not in body
+
+
+@pytest.mark.parametrize("name", ["ask-agent", "spawn", "dispatch-plan"])
+def test_alias_documentation_handles_powershell_dotted_keys(name: str) -> None:
+    body = text(name)
+    assert "hyphens" in body
+    assert "dots" in body
+    assert "${env:EINHERJAR_MODEL_DEEPSEEK_V4.1_FLASH}" in body

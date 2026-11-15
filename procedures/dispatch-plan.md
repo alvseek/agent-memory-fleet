@@ -32,6 +32,8 @@ Identify the plan, extra rules, explicit model, optional identity and project wo
 
 Use the platform's actual model vocabulary. On OpenCode pass a qualified `provider/model`, or an alias whose `EINHERJAR_MODEL_<ALIAS>` mapping resolves to one. An unresolved or refused model is a failure to report, never permission to substitute a different model. Keep that model on every continuation.
 
+Aliases are uppercased with hyphens replaced by underscores; dots are preserved. Use a simple alias or a qualified model where possible. Dotted environment-variable names require the braced PowerShell form, such as `${env:EINHERJAR_MODEL_DEEPSEEK_V4.1_FLASH} = 'opencode-go/deepseek-v4.1-flash'`.
+
 ## 2. Prepare the handoff and announce it
 
 Write a durable task file in a suitable project/task location or approved temporary directory. Include all of these fields:
