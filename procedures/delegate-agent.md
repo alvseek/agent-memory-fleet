@@ -53,7 +53,7 @@ With no target, use the anonymous command:
 einherjar spawn --prompt "Read the complete task at <absolute task path> and follow it." --theme "<theme>" [--model <value>]
 ```
 
-Run it in the project's working directory through the invoking platform's completion-aware background shell tool:
+Follow `ask-agent` Step 3's waiting guidance when choosing task timeouts. Run the blocking command in the project's working directory through the invoking platform's completion-aware background shell tool:
 
 - OpenCode: `shell` with `background: true` notifies this session when the blocking command finishes.
 - Claude Code: use the available Bash/PowerShell `run_in_background` option only when it delivers completion to this conversation; respect its task lifetime/timeout rules.
@@ -71,7 +71,7 @@ If output is retained in a file, read the necessary result from that file withou
 
 To continue, use blocking `einherjar ask <SessionRef>` through the same platform task mechanism. Keep an explicit model on continuations. Do not run overlapping turns against the same ref.
 
-On timeout, interruption or missing completion, inspect the existing task/session before retrying. No result is not proof the worker stopped, and stale/missing registry tracking is not proof a turn failed. A registry 401 never warrants repeating completed work.
+On timeout, interruption or missing completion, follow `ask-agent` Step 4's recovery guidance before sending another turn. Stale/missing registry tracking is not proof a turn failed. A registry 401 never warrants repeating completed work.
 
 ## Ending the session
 

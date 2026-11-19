@@ -91,6 +91,19 @@ def test_dispatch_inputs_and_precedence() -> None:
         assert phrase in body
 
 
+def test_waiting_and_recovery_guidance_is_owned_by_ask_agent() -> None:
+    ask = text("ask-agent")
+    assert "Waiting is not a task deadline" in ask
+    assert "moving it to the background does not necessarily remove its time limit" in ask
+    assert "Do not impose a short shell timeout merely because it is the default" in ask
+    assert "A killed Einherjar process or timed-out wait request" in ask
+    assert "recover its result before sending another turn" in ask
+    assert "independent of the shell timeout" in ask
+    delegate = text("delegate-agent")
+    assert "Follow `ask-agent` Step 3's waiting guidance" in delegate
+    assert "follow `ask-agent` Step 4's recovery guidance before sending another turn" in delegate
+
+
 def test_dispatch_context_and_focused_handoff() -> None:
     body = text("dispatch-plan")
     for phrase in (

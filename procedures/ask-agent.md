@@ -79,7 +79,9 @@ Run the fleet client (blocking):
 einherjar ask "[Name|SessionRef]" --prompt "[structured prompt]" --theme "[theme]" [--model <value>]
 ```
 
-With no target, run `einherjar spawn --prompt "[structured prompt]" --theme "[theme]" [--model <value>]` instead. Set the shell tool's working directory to the project. Use a suitable supported timeout for blocking work; the default is not a fixed cap. For parallel execution follow `delegate-agent` and keep the client blocking inside the platform's notification-capable task tool.
+With no target, run `einherjar spawn --prompt "[structured prompt]" --theme "[theme]" [--model <value>]` instead. Set the shell tool's working directory to the project.
+
+**Waiting is not a task deadline.** For long-running work, use a completion-aware platform background task when available, following `delegate-agent`. Keep the Einherjar command blocking inside that task, and check the platform's timeout behavior: moving it to the background does not necessarily remove its time limit. Do not impose a short shell timeout merely because it is the default. Without a completion-aware task facility, use a suitable supported timeout for blocking work.
 
 The client records the turn then runs it; when execution returns, success prints the session ref, envelope (platform, status, byte count, timings and log path) and reply. The ref is not streamed before the blocking runner returns. Failure is reported as an error; a registry outage buffers tracking without stopping work. Use a short stable theme; on OpenCode it also titles a new session.
 
@@ -87,7 +89,9 @@ The client records the turn then runs it; when execution returns, success prints
 
 Use the target agent's response to continue your work, and keep the ref from the first line (a UUID on Claude Code, `ses_...` on OpenCode). Resuming that ref with `/ask-agent [SessionRef]` sends a new prompt to the same session and records a new row; earlier rows are not overwritten. Every turn also appends its reply to that ref's log, so `einherjar result <ref>` reprints the last turn later, and `einherjar result <ref> --full` reprints every reply the session has produced.
 
-Use the current command result to judge this turn. `result` prefers a historical envelope if present and otherwise reads the reply log; an old envelope can predate a later blocking resume. Do not run overlapping turns against one ref. Timeout or interruption is not proof the worker stopped: inspect that task/session before retrying. Process success alone does not establish task completion.
+Use the current command result to judge this turn. `result` prefers a historical envelope if present and otherwise reads the reply log; an old envelope can predate a later blocking resume. Do not run overlapping turns against one ref. Process success alone does not establish task completion.
+
+**If waiting is interrupted, recover before resuming.** A killed Einherjar process or timed-out wait request does not prove the worker stopped. Inspect the existing worker session and recover its result before sending another turn. A recovery request may have its own timeout, independent of the shell timeout; increasing the shell timeout alone does not extend that request's limit.
 
 ## Ending the Session
 
