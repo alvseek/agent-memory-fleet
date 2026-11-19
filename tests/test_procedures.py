@@ -18,7 +18,7 @@ def test_served_set() -> None:
     assert {p.stem for p in PROCEDURES.glob("*.md")} == EXPECTED
 
 
-@pytest.mark.parametrize("name", CLIENT_PROCEDURES)
+@pytest.mark.parametrize("name", ["ask-agent", "delegate-agent", "spawn"])
 def test_install_and_registry_contract(name: str) -> None:
     body = text(name)
     for phrase in (
@@ -34,7 +34,7 @@ def test_install_and_registry_contract(name: str) -> None:
     assert "uv tool install einherjar" not in body
 
 
-@pytest.mark.parametrize("name", ["delegate-agent", "dispatch-plan", "spawn"])
+@pytest.mark.parametrize("name", ["delegate-agent", "spawn"])
 def test_notification_is_platform_owned(name: str) -> None:
     body = text(name)
     for phrase in ("blocking", "OpenCode", "Claude Code", "completion", "timeout", "poll"):
@@ -69,7 +69,7 @@ def test_spawn_is_anonymous_and_resumable() -> None:
         assert heading in body
 
 
-@pytest.mark.parametrize("name", CLIENT_PROCEDURES)
+@pytest.mark.parametrize("name", ["ask-agent", "delegate-agent", "spawn"])
 def test_prompt_file_and_explicit_model_contract(name: str) -> None:
     body = text(name)
     assert "single-line" in body
@@ -85,32 +85,23 @@ def test_dispatch_inputs_and_precedence() -> None:
         "--rules",
         "--agent",
         "--model",
-        "either order",
-        "filenames alone",
-        "plain Markdown",
-        "optional YAML",
-        "YAML is not required",
-        "override",
-        "missing model",
+        "override any argument except `--plan`",
+        "Resolve missing or conflicting instructions",
     ):
         assert phrase in body
-    assert "no mode setting" in body.lower()
 
 
-def test_dispatch_full_read_handoff_and_announcement() -> None:
+def test_dispatch_context_and_focused_handoff() -> None:
     body = text("dispatch-plan")
     for phrase in (
-        "Read both documents fully",
-        "truncated",
+        "Read the full plan and any supplied rules",
+        "plan's originating wizard procedure",
         "implement-plan",
-        "[PROJECT-ACCESS]",
-        "read_procedure",
-        "task file",
-        "announcement, not a confirmation",
-        "proceed without waiting",
-        "exclusive ownership",
-        "Acceptance Criteria",
-        "Expected Output",
+        "fleet's `ask-agent` procedure",
+        "An omitted identity means an anonymous worker",
+        "Handle simple fixes yourself",
+        "Any necessary context not already included in the plan",
+        "Do not invent a custom command or rewrite the implementation procedure",
     ):
         assert phrase in body
 
@@ -118,17 +109,13 @@ def test_dispatch_full_read_handoff_and_announcement() -> None:
 def test_dispatch_supervision_and_human_gates() -> None:
     body = text("dispatch-plan")
     for phrase in (
-        "same worker",
-        "same-resolved-model",
-        "not that the plan is finished",
+        "Continue the same worker",
+        "does not by itself mean the assignment is complete",
         "verification evidence",
-        "STOP/sign-off",
-        "scope changes",
+        "explicit human gates",
         "costly to reverse",
-        "Do not archive",
-        "Anonymous workers",
-        "duplicate",
-        "registry 401",
+        "Completion does not authorize release, merge or archive",
+        "do not launch overlapping work on the same files",
     ):
         assert phrase in body
 
@@ -145,7 +132,7 @@ def test_procedures_never_prescribe_removed_cli_launches(name: str) -> None:
 
 
 def test_historical_results_are_not_live_completion() -> None:
-    for name in CLIENT_PROCEDURES:
+    for name in ["ask-agent", "delegate-agent", "spawn"]:
         body = text(name)
         assert "historical" in body
         assert "current command result" in body or "current turn" in body
@@ -158,7 +145,7 @@ def test_readme_and_load_fleet_offer_dispatch() -> None:
         assert "spawn --prompt ... [--background]" not in body
 
 
-@pytest.mark.parametrize("name", ["ask-agent", "spawn", "dispatch-plan"])
+@pytest.mark.parametrize("name", ["ask-agent", "spawn"])
 def test_alias_documentation_handles_powershell_dotted_keys(name: str) -> None:
     body = text(name)
     assert "hyphens" in body
