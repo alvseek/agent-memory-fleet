@@ -1,6 +1,6 @@
 # Dispatch Plan
 
-Execute an approved plan by coordinating implementation: delegate phases and longer tasks, handle simple fixes yourself, and verify progress before continuing.
+Follow the coding layer's `implement-plan` procedure on an approved plan, delegating phases and longer tasks to workers while handling simple fixes yourself.
 
 ## Arguments
 
@@ -11,33 +11,24 @@ Execute an approved plan by coordinating implementation: delegate phases and lon
 ```
 
 - `--plan`: use this approved plan; otherwise use the plan established in the conversation.
-- `--rules`: read these additional instructions fully and apply them while coordinating implementation. Rules may extend this procedure and override any argument except `--plan`.
+- `--rules`: read these additional instructions fully and apply them yourself. Rules may extend this procedure and override any argument except `--plan`.
 - `--model`: use this model for delegated work.
-- `--agent`: optionally use this fleet identity; otherwise spawn without an identity.
+- `--agent`: optionally use this fleet identity; otherwise use an anonymous worker.
 
 Resolve missing or conflicting instructions before starting the affected work.
 
 ## Execute
 
-1. **Load the context.** Read the full plan and any supplied rules. Load the plan's originating wizard procedure and the coding layer's `implement-plan` procedure, and read any parent plan or project instructions required by the selected plan.
+1. **Follow `implement-plan`.** Load and follow the coding layer's `implement-plan` procedure, including its context loading, the plan's originating wizard procedure and its execution protocol. The instructions below add delegation; they do not replace that procedure.
 
-2. **Follow the plan.** Use its Execution Protocol and implementation log as the source of truth. Start with the next unfinished step whose approval and STOP gates are cleared.
+2. **Delegate substantial work.** Assign phases and longer tasks through the fleet's `ask-agent` procedure using the selected model and optional identity. Handle simple fixes yourself unless the supplied rules specify otherwise.
 
-3. **Choose the execution size.** Delegate a phase or longer task through the fleet's `ask-agent` procedure, using the selected model and optional identity. An omitted identity means an anonymous worker, not a request to choose an agent. Handle simple fixes yourself. Follow the supplied rules when they specify a different division of work.
+3. **Give a focused assignment.** Tell the worker to read the plan, execute the assigned phase or step, and load and follow `implement-plan` for that assignment. Include applicable implementation rules and only necessary context absent from the plan. Do not invent a custom command or rewrite the implementation procedure.
 
-4. **Give a focused assignment.** Tell the worker:
-   - Which plan to read.
-   - Which phase, step or longer task to execute.
-   - To load and follow the coding layer's `implement-plan` procedure.
-   - Any necessary context not already included in the plan.
-   - Any additional rules relevant to its assignment.
+   Apply rules about how you delegate yourself. Do not pass them on as instructions for the worker to delegate again. Further delegation requires an explicit instruction permitting it for that worker.
 
-   Do not invent a custom command or rewrite the implementation procedure. Apply coordination instructions yourself; give the worker the instructions it needs for its assigned work.
+4. **Supervise through completion.** Read the worker's result, inspect its changes and verification evidence, and check the plan's execution log before continuing. Resume the same worker if its assignment is unfinished. Do not overlap work on the same files or edit files a worker is changing.
 
-   When custom rules instruct you to delegate, apply those instructions yourself. Do not pass them on as instructions for the worker to delegate again. Pass only the assigned work and applicable implementation rules. Further delegation requires an explicit instruction permitting it for that worker.
+5. **Continue or escalate.** Continue through the plan without routine reconfirmation. Bring blockers, unclear requirements, explicit human gates and decisions costly to reverse to [USER-NAME].
 
-5. **Supervise and verify.** Read the worker's result, inspect its changes and verification evidence, and check the plan's implementation log. A completed worker turn does not by itself mean the assignment is complete. Continue the same worker when its assignment needs further work; do not launch overlapping work on the same files.
-
-6. **Continue or escalate.** Handle routine in-scope corrections and proceed through the plan without asking for confirmation at each phase. Stop for blockers, unclear requirements, explicit human gates or decisions costly to reverse.
-
-7. **Report completion.** Summarize what was implemented, what was verified and what remains unfinished or unverified. Completion does not authorize release, merge or archive.
+6. **Report the outcome.** State what was implemented, what was verified and what remains unfinished or unverified. Completion does not authorize release, merge or archive.

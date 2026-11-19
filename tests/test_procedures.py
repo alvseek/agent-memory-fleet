@@ -94,13 +94,13 @@ def test_dispatch_inputs_and_precedence() -> None:
 def test_dispatch_context_and_focused_handoff() -> None:
     body = text("dispatch-plan")
     for phrase in (
-        "Read the full plan and any supplied rules",
+        "Load and follow the coding layer's `implement-plan` procedure",
         "plan's originating wizard procedure",
         "implement-plan",
         "fleet's `ask-agent` procedure",
-        "An omitted identity means an anonymous worker",
+        "otherwise use an anonymous worker",
         "Handle simple fixes yourself",
-        "Any necessary context not already included in the plan",
+        "only necessary context absent from the plan",
         "Do not invent a custom command or rewrite the implementation procedure",
     ):
         assert phrase in body
@@ -109,13 +109,13 @@ def test_dispatch_context_and_focused_handoff() -> None:
 def test_dispatch_supervision_and_human_gates() -> None:
     body = text("dispatch-plan")
     for phrase in (
-        "Continue the same worker",
-        "does not by itself mean the assignment is complete",
+        "Resume the same worker if its assignment is unfinished",
+        "check the plan's execution log before continuing",
         "verification evidence",
         "explicit human gates",
         "costly to reverse",
         "Completion does not authorize release, merge or archive",
-        "do not launch overlapping work on the same files",
+        "Do not overlap work on the same files or edit files a worker is changing",
     ):
         assert phrase in body
 
