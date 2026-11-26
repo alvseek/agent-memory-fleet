@@ -32,7 +32,7 @@ Auto-detect from `git rev-parse --show-toplevel` (basename) or use the provided 
 Call `list_shared_context(project="<project>")` and find the row whose `theme` is `fleet-agents`.
 
 - **Absent**: report *"No fleet for this project yet. Use `/setup-fleet` to define one."* and stop.
-- **Present**: read its body with `get(uuid)`. That body is the roster table.
+- **Present**: read its body with `get_memory(uuid)`. That body is the roster table.
 
 There is no file to fall back to. The roster has one home, the project's context, and an absent row means the project has no fleet.
 

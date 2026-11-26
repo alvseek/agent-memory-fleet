@@ -27,7 +27,7 @@ Call `read_resource("knowledge-file-template")` and take the value on its `templ
 
 Call `list_shared_context(project="<project>")` and look for the row whose `theme` is `fleet-agents`.
 
-- **Found**: this is an update. Keep its `uuid`, and read the current body with `get(uuid)` before rewriting it.
+- **Found**: this is an update. Keep its `uuid`, and read the current body with `get_memory(uuid)` before rewriting it.
 - **Not found**: this is a create.
 
 ### Step 4: Define the Team
@@ -73,9 +73,9 @@ insert(
 
 **Update** when a row was found. Replace the body in place:
 
-1. `get(uuid)` and keep the exact body you read.
-2. `edit(uuid, old_string="<the old body>", new_string="<the new table>")`. The old string must match byte for byte, so paste the body you just read rather than retyping it.
-3. If the old summary no longer describes the roster, call `edit_metadata(uuid, content_summary="...")`.
+1. `get_memory(uuid)` and keep the exact body you read.
+2. `edit_memory_body(uuid, old_string="<the old body>", new_string="<the new table>")`. The old string must match byte for byte, so paste the body you just read rather than retyping it.
+3. If the old summary no longer describes the roster, call `edit_memory_metadata(uuid, content_summary="...")`.
 
 Do not delete and re-insert. That changes the uuid, and a roster's identity should survive an edit.
 
